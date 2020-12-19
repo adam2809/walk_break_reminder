@@ -27,4 +27,13 @@ ap_server = aphttpserver.APHttpServer(
     PORT
 )
 
+ap_server.add_endpoint('/ok',lambda req : aphttpserver.Response(
+    200,
+    'okejka'
+))
+ap_server.add_endpoint('/',lambda req : aphttpserver.Response(
+    200,
+    'home'
+))
+
 ap_server.loop();

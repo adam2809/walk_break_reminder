@@ -21,6 +21,8 @@ class APHttpServer:
         self.password = password
         self.port = port
 
+        self.endpoint_action_mapping = dict()
+
         self.activate_ap()
         self.bind_socket();
 
@@ -37,10 +39,16 @@ class APHttpServer:
         print('Activation successful')
         print(ap.ifconfig())
 
+
     def bind_socket(self):
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.s.bind(('', 80))
         self.s.listen(5)
+
+
+    def add_endpoint(self,path,action):
+        self.endpoint_action_mapping[path] = action
+
 
     def loop(self):
         while True:
@@ -49,13 +57,43 @@ class APHttpServer:
             request = conn.recv(1024)
             print('Content = %s' % str(request))
 
-            response = '\r\n'.join([
-                'HTTP/1.1 200 OK',
-                'Content-Length: 6',
-                '',
-                'okejka'
-            ])
+            (method,path) = split_request(request)
 
-            print('Sending = %s' % response)
-            conn.send(response)
+            response = self.endpoint_action_mapping[path](request)
+
+            response_str = make_response_str(response)
+
+            print('Sending = %s' % response_str)
+            conn.send(response_str)
             conn.close()
+
+
+def split_request(request):
+    request_line = request.decode("utf-8").split('\n')[0]
+
+    return (request_line.split(' ')[0],request_line.split(' ')[1])
+
+
+def make_response_str(response):
+    return '\r\n'.join([
+        'HTTP/1.1 %s' % response.get_status_string(),
+        'Content-Length: %s' % response.content_length,
+        'Content-type: application/json',
+        '',
+        response.content
+    ])
+
+
+class Response:
+    STATUS_NAME_DICT = {
+        200:'OK',
+        404:'Not Found'
+    }
+
+    def __init__(self,status,content):
+        self.status = status
+        self.content = content
+        self.content_length = len(content)
+
+    def get_status_string(self):
+        return '%s %s' % (self.status, self.STATUS_NAME_DICT[self.status])
