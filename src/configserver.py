@@ -15,12 +15,12 @@ esp.osdebug(None)
 import gc
 gc.collect()
 
-ssid = 'MicroPython-AP'
-password = '123456789'
+SSID = 'MicroPython-AP'
+PASSWORD = '123456789'
 
 ap = network.WLAN(network.AP_IF)
 ap.active(True)
-ap.config(essid=ssid, password=password)
+ap.config(essid=SSID, password=PASSWORD)
 
 while ap.active() == False:
     pass
