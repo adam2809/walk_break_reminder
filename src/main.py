@@ -1,58 +1,30 @@
-# Complete project details at https://RandomNerdTutorials.com
-
-SERVER_NAME = "ESP32 Strava Tracker"
-CLIENT_ID = ''
-
 try:
     import usocket as socket
 except:
     import socket
 import network
 import esp
+import aphttpserver
+import gc
+
+esp.osdebug(None)
+gc.collect()
+
+SERVER_NAME = "ESP32 Strava Tracker"
+CLIENT_ID = ''
+SSID = 'MicroPython-AP'
+PASSWORD = '123456789'
+PORT = 80
 
 esp.osdebug(None)
 
-import gc
 gc.collect()
 
-ssid = 'MicroPython-AP'
-password = '123456789'
+ap_server = aphttpserver.APHttpServer(
+    SERVER_NAME,
+    SSID,
+    PASSWORD,
+    PORT
+)
 
-ap = network.WLAN(network.AP_IF)
-ap.active(True)
-ap.config(essid=ssid, password=password)
-
-while ap.active() == False:
-    pass
-
-print('Connection successful')
-print(ap.ifconfig())
-
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.bind(('', 80))
-s.listen(5)
-
-
-while True:
-    conn, addr = s.accept()
-    print('Got a connection from %s' % str(addr))
-    request = conn.recv(1024)
-    print('Content = %s' % str(request))
-
-    redirect_url = 'http://www.strava.com/oauth/authorize? \
-client_id=%s& \
-response_type=code& \
-redirect_uri=http://localhost/exchange_token \
-&approval_prompt=force& \
-scope=read' % CLIENT_ID
-
-    response = '\r\n'.join([
-        'HTTP/1.1 303 Permanent Redirect',
-        'Content-Length: 0',
-        'Location: %s' % redirect_url,
-        ''
-    ])
-
-    print('Sending = %s' % response)
-    conn.send(response)
-    conn.close()
+ap_server.loop();
