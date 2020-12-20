@@ -20,20 +20,24 @@ esp.osdebug(None)
 
 gc.collect()
 
-ap_server = aphttpserver.APHttpServer(
-    SERVER_NAME,
-    SSID,
-    PASSWORD,
-    PORT
-)
+wlan = network.WLAN(network.STA_IF)
+wlan.active(True)
 
-ap_server.add_endpoint('/ok',lambda req : aphttpserver.Response(
-    200,
-    'okejka'
-))
-ap_server.add_endpoint('/',lambda req : aphttpserver.Response(
-    200,
-    'home'
-))
 
-ap_server.loop();
+# ap_server = aphttpserver.APHttpServer(
+#     SERVER_NAME,
+#     SSID,
+#     PASSWORD,
+#     PORT
+# )
+#
+# ap_server.add_endpoint('/ok',lambda req : aphttpserver.Response(
+#     200,
+#     'okejka'
+# ))
+# ap_server.add_endpoint('/',lambda req : aphttpserver.Response(
+#     200,
+#     'home'
+# ))
+#
+# ap_server.loop();
