@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <HTTPClient.h>
 #include <WiFi.h>
+#include <SPIFFS.h>
 
 #define SSID "UPC6530397"
 #define PASSWORD "tmp"
@@ -54,19 +55,11 @@ void connectToWiFi(){
 	Serial.println(WiFi.localIP());
 }
 
-void get_strava_athlete_status(){
-
-}
-
-void setup() {
-	Serial.begin(115200);
-
-	connectToWiFi();
-
-	http.begin(STRAVA_API_URL + String("/athlete"), stravaCa);
+void performStravaApiRequest(const char* method,String endpoint,String payload){
+	http.begin(STRAVA_API_URL + endpoint, stravaCa);
     http.addHeader("Authorization",  "Bearer " + String(AUTH_TOKEN));
 
-	int httpCode = http.GET();
+	int httpCode = http.sendRequest(method,payload);
 
 	if (httpCode > 0) {
 		String payload = http.getString();
@@ -78,6 +71,16 @@ void setup() {
 	}
 
 	http.end();
+}
+
+void setup() {
+	Serial.begin(115200);
+
+	connectToWiFi();
+
+
+	Serial.println("Performing strava request");
+	performStravaApiRequest("GET","/athlete","");
 }
 
 void loop() {
