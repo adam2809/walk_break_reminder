@@ -5,6 +5,7 @@
 #include <ArduinoJson.h>
 
 #define STRAVA_API_URL "https://www.strava.com/api/v3"
+#define AUTH_HEADER "Authorization", "Bearer " + String(authToken)
 
 const char* authToken;
 char stravaCa[2048];
@@ -44,6 +45,7 @@ void listDir(fs::FS &fs, const char * dirname, uint8_t levels){
 }
 
 bool readFile(fs::FS &fs, const char * path){
+    // TODO make this like here https://github.com/adjavaherian/solar-server/blob/master/lib/Poster/Poster.cpp
     Serial.printf("Reading file: %s\r\n", path);
 
     readBuffer = "";
@@ -82,9 +84,11 @@ void connectToWiFi(const char* ssid,const char* password){
 	Serial.println(WiFi.localIP());
 }
 
-void performStravaApiRequest(const char* method,String endpoint,String payload){
+void performStravaApiRequest(const char* method,String endpoint,String payload,String headers[],int headersCount){
 	http.begin(STRAVA_API_URL + endpoint, stravaCa);
-    http.addHeader("Authorization",  "Bearer " + String(authToken));
+    for(int i=0;i<headersCount;i+=2){
+        http.addHeader(headers[i], headers[i+1]);
+    }
 
 	int httpCode = http.sendRequest(method,payload);
 
@@ -123,7 +127,18 @@ void setup() {
 	connectToWiFi(config["ssid"],config["password"]);
 
 	Serial.println("Performing strava request");
-	performStravaApiRequest("GET","/athlete","");
+
+    String getAthleteInfoHeaders[2] = {
+        AUTH_HEADER
+    };
+
+	performStravaApiRequest(
+        "GET",
+        "/athlete",
+        "",
+        getAthleteInfoHeaders,
+        1
+    );
 }
 
 void loop() {
