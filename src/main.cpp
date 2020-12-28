@@ -2,44 +2,71 @@
 #include <HTTPClient.h>
 #include <WiFi.h>
 #include <SPIFFS.h>
+#include <ArduinoJson.h>
 
-#define SSID "UPC6530397"
-#define PASSWORD "tmp"
-#define AUTH_TOKEN "tmp"
 #define STRAVA_API_URL "https://www.strava.com/api/v3"
 
-const char* stravaCa = \
-"-----BEGIN CERTIFICATE-----\n" \
-"MIIDxTCCAq2gAwIBAgIBADANBgkqhkiG9w0BAQsFADCBgzELMAkGA1UEBhMCVVMx\n" \
-"EDAOBgNVBAgTB0FyaXpvbmExEzARBgNVBAcTClNjb3R0c2RhbGUxGjAYBgNVBAoT\n" \
-"EUdvRGFkZHkuY29tLCBJbmMuMTEwLwYDVQQDEyhHbyBEYWRkeSBSb290IENlcnRp\n" \
-"ZmljYXRlIEF1dGhvcml0eSAtIEcyMB4XDTA5MDkwMTAwMDAwMFoXDTM3MTIzMTIz\n" \
-"NTk1OVowgYMxCzAJBgNVBAYTAlVTMRAwDgYDVQQIEwdBcml6b25hMRMwEQYDVQQH\n" \
-"EwpTY290dHNkYWxlMRowGAYDVQQKExFHb0RhZGR5LmNvbSwgSW5jLjExMC8GA1UE\n" \
-"AxMoR28gRGFkZHkgUm9vdCBDZXJ0aWZpY2F0ZSBBdXRob3JpdHkgLSBHMjCCASIw\n" \
-"DQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAL9xYgjx+lk09xvJGKP3gElY6SKD\n" \
-"E6bFIEMBO4Tx5oVJnyfq9oQbTqC023CYxzIBsQU+B07u9PpPL1kwIuerGVZr4oAH\n" \
-"/PMWdYA5UXvl+TW2dE6pjYIT5LY/qQOD+qK+ihVqf94Lw7YZFAXK6sOoBJQ7Rnwy\n" \
-"DfMAZiLIjWltNowRGLfTshxgtDj6AozO091GB94KPutdfMh8+7ArU6SSYmlRJQVh\n" \
-"GkSBjCypQ5Yj36w6gZoOKcUcqeldHraenjAKOc7xiID7S13MMuyFYkMlNAJWJwGR\n" \
-"tDtwKj9useiciAF9n9T521NtYJ2/LOdYq7hfRvzOxBsDPAnrSTFcaUaz4EcCAwEA\n" \
-"AaNCMEAwDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8BAf8EBAMCAQYwHQYDVR0OBBYE\n" \
-"FDqahQcQZyi27/a9BUFuIMGU2g/eMA0GCSqGSIb3DQEBCwUAA4IBAQCZ21151fmX\n" \
-"WWcDYfF+OwYxdS2hII5PZYe096acvNjpL9DbWu7PdIxztDhC2gV7+AJ1uP2lsdeu\n" \
-"9tfeE8tTEH6KRtGX+rcuKxGrkLAngPnon1rpN5+r5N9ss4UXnT3ZJE95kTXWXwTr\n" \
-"gIOrmgIttRD02JDHBHNA7XIloKmf7J6raBKZV8aPEjoJpL1E/QYVN8Gb5DKj7Tjo\n" \
-"2GTzLH4U/ALqn83/B2gX2yKQOC16jdFU8WnjXzPKej17CuPKf1855eJ1usV2GDPO\n" \
-"LPAvTK33sefOT6jEm0pUBsV/fdUID+Ic/n4XuKxe9tQWskMJDE32p2u0mYRlynqI\n" \
-"4uJEvlz36hz1\n" \
-"-----END CERTIFICATE-----\n";
-
+const char* authToken;
+char stravaCa[2048];
 HTTPClient http;
+StaticJsonBuffer<1024> jsonBuffer;
+String readBuffer;
+
+void listDir(fs::FS &fs, const char * dirname, uint8_t levels){
+    Serial.printf("Listing directory: %s\r\n", dirname);
+
+    File root = fs.open(dirname);
+    if(!root){
+        Serial.println("- failed to open directory");
+        return;
+    }
+    if(!root.isDirectory()){
+        Serial.println(" - not a directory");
+        return;
+    }
+
+    File file = root.openNextFile();
+    while(file){
+        if(file.isDirectory()){
+            Serial.print("  DIR : ");
+            Serial.println(file.name());
+            if(levels){
+                listDir(fs, file.name(), levels -1);
+            }
+        } else {
+            Serial.print("  FILE: ");
+            Serial.print(file.name());
+            Serial.print("\tSIZE: ");
+            Serial.println(file.size());
+        }
+        file = root.openNextFile();
+    }
+}
+
+bool readFile(fs::FS &fs, const char * path){
+    Serial.printf("Reading file: %s\r\n", path);
+
+    readBuffer = "";
+    File file = fs.open(path);
+    if(!file || file.isDirectory()){
+        Serial.println("- failed to open file for reading");
+        return false;
+    }
+
+    Serial.println("- read from file:");
+    while(file.available()){
+        String curr = file.readString();
+        Serial.println(curr);
+        readBuffer.concat(curr);
+    }
+    file.close();
+    return true;
+}
  
-void connectToWiFi(){
- 
+void connectToWiFi(const char* ssid,const char* password){
 	WiFi.mode(WIFI_STA);
-	WiFi.begin(SSID, PASSWORD);
-	Serial.print("Connecting to "); Serial.println(SSID);
+	WiFi.begin(ssid, password);
+	Serial.print("Connecting to ");Serial.println(ssid);
 
 	uint8_t i = 0;
 	while (WiFi.status() != WL_CONNECTED){
@@ -57,7 +84,7 @@ void connectToWiFi(){
 
 void performStravaApiRequest(const char* method,String endpoint,String payload){
 	http.begin(STRAVA_API_URL + endpoint, stravaCa);
-    http.addHeader("Authorization",  "Bearer " + String(AUTH_TOKEN));
+    http.addHeader("Authorization",  "Bearer " + String(authToken));
 
 	int httpCode = http.sendRequest(method,payload);
 
@@ -76,8 +103,24 @@ void performStravaApiRequest(const char* method,String endpoint,String payload){
 void setup() {
 	Serial.begin(115200);
 
-	connectToWiFi();
+	if(!SPIFFS.begin()){ 
+		Serial.println("An Error has occurred while mounting SPIFFS");  
+	}
+    
+    if(!readFile(SPIFFS, "/strava_ca.pem")){
+        Serial.println("Could not load strava certificate file");
+    }
+    readBuffer.toCharArray(stravaCa,readBuffer.length());
 
+        
+    if(!readFile(SPIFFS, "/config.json")){
+        Serial.println("Could not load config file");
+    }
+    JsonObject& config = jsonBuffer.parseObject(readBuffer);
+    authToken = config["auth_token"];
+    Serial.print("Auth token is: ");Serial.println(authToken);
+
+	connectToWiFi(config["ssid"],config["password"]);
 
 	Serial.println("Performing strava request");
 	performStravaApiRequest("GET","/athlete","");
