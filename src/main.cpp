@@ -105,6 +105,7 @@ void connectToWiFi(const char* ssid,const char* password){
 }
 
 void performStravaApiRequest(const char* method,String endpoint,String payload,String headers[],int headersCount){
+    Serial.println(payload);
 	http.begin(STRAVA_API_URL + endpoint, stravaCa);
     for(int i=0;i<headersCount;i+=2){
         http.addHeader(headers[i], headers[i+1]);
@@ -141,7 +142,7 @@ void makeUploadPayload(){
 
         
         uploadPayload.concat("--"+String(MULTIPART_BOUNDARY));uploadPayload.concat("\r\n");
-        uploadPayload.concat(String(MULTIPART_FORM_KEY_PREFIX) + "\""+ key+"\"");if(key="file") uploadPayload.concat("; filename=\"test.gpx\"");uploadPayload.concat("\r\n");
+        uploadPayload.concat(String(MULTIPART_FORM_KEY_PREFIX) + "\""+ key+"\"");if(key=="file") uploadPayload.concat("; filename=\"test.gpx\"");uploadPayload.concat("\r\n");
         uploadPayload.concat("\r\n");
         uploadPayload.concat(val);uploadPayload.concat("\r\n");
     }
