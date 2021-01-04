@@ -4,14 +4,14 @@
 #include <SPIFFS.h>
 #include <ArduinoJson.h>
 
-#define STRAVA_API_URL "https://www.strava.com/api/v3"
+#define STRAVA_API_URL "http://192.168.0.87/api/v3"
 #define AUTH_HEADER "Authorization", "Bearer " + String(authToken)
 #define ACCEPT_HEADER "Accept", "*/*"
 #define ACCEPT_ENCODING_HEADER "Accept-Encoding", "gzip, deflate"
 #define CONNECTION_HEADER "Connection", "keep-alive"
 #define HOST_HEADER "Host", "www.strava.com"
 #define USER_AGENT_HEADER "User-Agent", "ESP32StravaTracker/0.0.1"
-#define MULTIPART_BOUNDARY "ESP32StravaTrackeraf39cf00aaaa"
+#define MULTIPART_BOUNDARY "fad39427494e74d088217338ea717252"
 #define MULTIPART_CONTENT_TYPE_HEADER "Content-Type", "multipart/form-data; boundary=" + String(MULTIPART_BOUNDARY)
 #define MULTIPART_FORM_KEY_PREFIX "Content-Disposition: form-data; name="
 
@@ -106,7 +106,7 @@ void connectToWiFi(const char* ssid,const char* password){
 
 void performStravaApiRequest(const char* method,String endpoint,String payload,String headers[],int headersCount){
     Serial.println(payload);
-	http.begin(STRAVA_API_URL + endpoint, stravaCa);
+	http.begin(STRAVA_API_URL + endpoint);
     for(int i=0;i<headersCount;i+=2){
         http.addHeader(headers[i], headers[i+1]);
     }
@@ -147,7 +147,7 @@ void makeUploadPayload(){
         uploadPayload.concat(val);uploadPayload.concat("\r\n");
     }
     uploadPayload.concat("\r\n");
-    uploadPayload.concat("--"+String(MULTIPART_BOUNDARY)+"--");uploadPayload.concat("\r\n");
+    uploadPayload.concat("--"+String(MULTIPART_BOUNDARY)+"--");
     uploadPayload.concat("\r\n");
 }
 
