@@ -3,6 +3,7 @@
 #include <WiFi.h>
 #include <SPIFFS.h>
 #include <ArduinoJson.h>
+#include <UDHttp.h>
 
 #define STRAVA_API_URL "https://www.strava.com/api/v3"
 #define AUTH_HEADER "Authorization", "Bearer " + String(authToken)
