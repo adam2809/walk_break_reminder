@@ -4,7 +4,7 @@
 #include <SPIFFS.h>
 #include <ArduinoJson.h>
 
-#define STRAVA_API_URL "http://192.168.0.87/api/v3"
+#define STRAVA_API_URL "http://192.168.0.87:3000"
 #define AUTH_HEADER "Authorization", "Bearer " + String(authToken)
 #define ACCEPT_HEADER "Accept", "*/*"
 #define ACCEPT_ENCODING_HEADER "Accept-Encoding", "gzip, deflate"
@@ -181,21 +181,21 @@ void setup() {
 
 	connectToWiFi(config["ssid"],config["password"]);
 
-    makeUploadPayload();
-    Serial.println(uploadPayload);
+	makeUploadPayload();
+	Serial.println(uploadPayload);
 
-    String getAthleteInfoHeaders[2] = {
-        AUTH_HEADER
-    };
-    String uploadActivityHeaders[16] = {
-        ACCEPT_HEADER,
-        ACCEPT_ENCODING_HEADER,
-        AUTH_HEADER,
-        CONNECTION_HEADER,
-        MULTIPART_CONTENT_TYPE_HEADER,
-        HOST_HEADER,
-        USER_AGENT_HEADER
-    };
+	String getAthleteInfoHeaders[2] = {
+		AUTH_HEADER
+	};
+	String uploadActivityHeaders[16] = {
+		ACCEPT_HEADER,
+		ACCEPT_ENCODING_HEADER,
+		AUTH_HEADER,
+		CONNECTION_HEADER,
+		MULTIPART_CONTENT_TYPE_HEADER,
+		HOST_HEADER,
+		USER_AGENT_HEADER
+	};
 
 
 	Serial.println("Performing strava request");
