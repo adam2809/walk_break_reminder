@@ -39,28 +39,7 @@ void uploadTestGpx(){
     );
 }
 
-void setup() {
-	Serial.begin(115200);
-	String readBuffer;
-
-	if(!SPIFFS.begin()){ 
-		Serial.println("An Error has occurred while mounting SPIFFS");  
-	}
-
-    if(!readFile(SPIFFS, "/config.json",readBuffer)){
-        Serial.println("Could not load config file");
-    }
-	Serial.println(readBuffer);
-    JsonObject& config = jsonBuffer.parseObject(readBuffer);
-
-    if(!readFile(SPIFFS, "/test.gpx",readBuffer)){
-        Serial.println("Could not test gpx file");
-    }
-    readBuffer.toCharArray(testGpx,readBuffer.length());
-
-	connectToWiFi(config["ssid"],config["password"]);
-
-
+void startServer(JsonObject& config){
 	server.on("/config", HTTP_GET, [&](AsyncWebServerRequest *request){
 		char configJsonString[1024];
 		config.printTo(configJsonString);
@@ -85,10 +64,40 @@ void setup() {
 		char configJsonString[1024];
 		config.printTo(configJsonString);
 
+		writeFile(SPIFFS, "/config.json", configJsonString);
+
 		request->send_P(200, "application/json",configJsonString);
 	});
 
 	server.begin();
+}
+
+
+
+void setup() {
+	Serial.begin(115200);
+	String readBuffer;
+
+	if(!SPIFFS.begin()){ 
+		Serial.println("An Error has occurred while mounting SPIFFS");  
+	}
+
+    if(!readFile(SPIFFS, "/config.json",readBuffer)){
+        Serial.println("Could not load config file");
+    }
+	Serial.println(readBuffer);
+    
+	JsonObject& config = jsonBuffer.parseObject(readBuffer);
+
+    if(!readFile(SPIFFS, "/test.gpx",readBuffer)){
+        Serial.println("Could not test gpx file");
+    }
+    readBuffer.toCharArray(testGpx,readBuffer.length());
+
+	connectToWiFi(config["ssid"],config["password"]);
+
+
+	startServer(config);
 }
 
 void loop() {
