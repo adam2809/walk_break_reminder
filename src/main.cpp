@@ -1,5 +1,7 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
 #include "file_utils.hpp"
 #include "networking.hpp"
 
@@ -10,9 +12,10 @@
 #define USER_AGENT_HEADER "User-Agent", "ESP32StravaTracker/0.0.1"
 #define CONTENT_TYPE_HEADER "Content-Type", "application/xml"
 
-StaticJsonBuffer<1024> jsonBuffer;
+DynamicJsonBuffer jsonBuffer(JSON_OBJECT_SIZE(3));
 char testGpx[4096];
 HTTPClient http;
+AsyncWebServer server(80);
 
 void uploadTestGpx(){
 	String uploadActivityHeaders[] = {
@@ -56,6 +59,36 @@ void setup() {
     readBuffer.toCharArray(testGpx,readBuffer.length());
 
 	connectToWiFi(config["ssid"],config["password"]);
+
+
+	server.on("/config", HTTP_GET, [&](AsyncWebServerRequest *request){
+		char configJsonString[1024];
+		config.printTo(configJsonString);
+		request->send_P(200, "application/json",configJsonString);
+	});
+
+	server.on("/config", HTTP_PUT, [&](AsyncWebServerRequest *request){
+		if(
+			!request->hasParam("ssid") ||
+			!request->hasParam("password")
+		){
+			request->send_P(400, "application/json","Error: missing required parameters");
+			return;
+		}
+		String ssid = request->getParam("ssid")->value();
+		String password = request->getParam("password")->value();
+
+		Serial.print("Setting new ssid: ");Serial.print(ssid);Serial.print(" and password: ");Serial.print(password);Serial.println();
+		config["ssid"] = ssid;
+		config["password"] = password;
+
+		char configJsonString[1024];
+		config.printTo(configJsonString);
+
+		request->send_P(200, "application/json",configJsonString);
+	});
+
+	server.begin();
 }
 
 void loop() {

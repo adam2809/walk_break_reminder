@@ -1,6 +1,7 @@
 #include "networking.hpp"
 
 void connectToWiFi(const char* ssid,const char* password){
+	Serial.print("Trying to connect to WiFi with SSID = ");Serial.print(ssid);Serial.print(" and password ");Serial.print(password);Serial.println();
 	WiFi.mode(WIFI_STA);
 	WiFi.begin(ssid, password);
 	Serial.print("Connecting to ");Serial.println(ssid);
@@ -15,8 +16,7 @@ void connectToWiFi(const char* ssid,const char* password){
 		}
 	}
 
-	Serial.print(F("Connected. My IP address is: "));
-	Serial.println(WiFi.localIP());
+	Serial.print(F("Connected. My IP address is: "));Serial.println(WiFi.localIP());
 }
 
 void performSupportServerRequest(HTTPClient& http,const char* method,String endpoint,String payload,String headers[],int headersCount){
