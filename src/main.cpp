@@ -15,11 +15,7 @@
 
 #define MAX_WIFI_NETWORKS 10
 
-DynamicJsonBuffer jsonBuffer(
-	JSON_OBJECT_SIZE(2) + 
-	JSON_ARRAY_SIZE(MAX_WIFI_NETWORKS) + 
-	JSON_OBJECT_SIZE(2)
-);
+DynamicJsonBuffer jsonBuffer(JSON_ARRAY_SIZE(3) + MAX_WIFI_NETWORKS*JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(2));
 char testGpx[4096];
 HTTPClient http;
 AsyncWebServer server(80);
@@ -58,7 +54,8 @@ void startServer(JsonObject& config){
 		request->send_P(200, "application/json",configJsonString);
 	});
 
-	server.on("/wifi", HTTP_PUT, [&](AsyncWebServerRequest *request){
+	server.on("/wifi", HTTP_POST, [&] (AsyncWebServerRequest *request){
+		Serial.println("Got POST on /wifi");
 		if(
 			!request->hasParam("ssid") ||
 			!request->hasParam("password")
@@ -66,12 +63,18 @@ void startServer(JsonObject& config){
 			request->send_P(400, "application/json","Error: missing required parameters");
 			return;
 		}
-		String ssid = request->getParam("ssid")->value();
-		String password = request->getParam("password")->value();
+		const char* ssid = request->getParam("ssid")->value().c_str();
+		const char* password = request->getParam("password")->value().c_str();
 
-		Serial.print("Setting new ssid: ");Serial.print(ssid);Serial.print(" and password: ");Serial.print(password);Serial.println();
-		config["wifi"][2]["ssid"] = ssid;
-		config["wifi"][2]["password"] = password;
+		Serial.println("Adding wifi config:");
+		StaticJsonBuffer<JSON_OBJECT_SIZE(3)> tmpJsonBuffer;
+		JsonObject& newWiFi = tmpJsonBuffer.createObject();
+		newWiFi.set("ssid", ssid);
+		newWiFi.set("password",password);
+		newWiFi.printTo(Serial);Serial.println();
+
+		JsonArray& currWiFiNetworks = config["wifi"].as<JsonArray&>();
+		currWiFiNetworks.add(newWiFi);
 
 		char configJsonString[1024];
 		config.printTo(configJsonString);
