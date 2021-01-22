@@ -48,6 +48,7 @@ String configHtmlTemplateProcessor(const String& var){
 
 void startServer(JsonObject& config){
 	server.on("/wifi", HTTP_GET, [&](AsyncWebServerRequest *request){
+		Serial.println("Got GET on /wifi");
 		char configJsonString[1024];
 		config.printTo(configJsonString);
 		// request->send_P(200, "text/html",config_html,configHtmlTemplateProcessor);
@@ -60,17 +61,17 @@ void startServer(JsonObject& config){
 			!request->hasParam("ssid") ||
 			!request->hasParam("password")
 		){
-			request->send_P(400, "application/json","Error: missing required parameters");
+			request->send_P(400, "application/json","Error: missing required parameter ssid or password");
 			return;
 		}
-		const char* ssid = request->getParam("ssid")->value().c_str();
-		const char* password = request->getParam("password")->value().c_str();
+		const char* ssidtoAdd = request->getParam("ssid")->value().c_str();
+		const char* passwordToAdd = request->getParam("password")->value().c_str();
 
 		Serial.println("Adding wifi config:");
 		StaticJsonBuffer<JSON_OBJECT_SIZE(3)> tmpJsonBuffer;
 		JsonObject& newWiFi = tmpJsonBuffer.createObject();
-		newWiFi.set("ssid", ssid);
-		newWiFi.set("password",password);
+		newWiFi.set("ssid", ssidtoAdd);
+		newWiFi.set("password",passwordToAdd);
 		newWiFi.printTo(Serial);Serial.println();
 
 		JsonArray& currWiFiNetworks = config["wifi"].as<JsonArray&>();
@@ -81,6 +82,28 @@ void startServer(JsonObject& config){
 
 		writeFile(SPIFFS, "/config.json", configJsonString);
 
+		request->send_P(200, "application/json",configJsonString);
+	});
+
+	server.on("/wifi", HTTP_DELETE, [&](AsyncWebServerRequest *request){
+		Serial.println("Got DELETE on /wifi");
+		if(!request->hasParam("ssid")){
+			request->send_P(400, "application/json","Error: missing required parameter ssid");
+			return;
+		}
+		const char* ssidToDelete = request->getParam("ssid")->value().c_str();
+		JsonArray& currWiFiNetworks = config["wifi"].as<JsonArray&>();
+
+		for (int i=0; i<currWiFiNetworks.size(); i++) {
+			if(currWiFiNetworks[i]["ssid"] == ssidToDelete){
+				Serial.print("Removing ");Serial.println(ssidToDelete);
+				currWiFiNetworks.remove(i);
+				break;
+			}
+		}
+
+		char configJsonString[1024];
+		config.printTo(configJsonString);
 		request->send_P(200, "application/json",configJsonString);
 	});
 
