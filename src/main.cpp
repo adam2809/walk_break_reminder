@@ -2,6 +2,7 @@
 #include <ArduinoJson.h>
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
+#include "AsyncJson.h"
 #include "file_utils.hpp"
 #include "networking.hpp"
 #include "html_pages.hpp"
@@ -41,6 +42,9 @@ void uploadTestGpx(){
         6
     );
 }
+void notFound(AsyncWebServerRequest *request){
+  request->send(404, "application/json", "{\"message\":\"Not found\"}");
+}
 
 void startServer(JsonObject& config){
 	server.on("/", HTTP_GET, [&](AsyncWebServerRequest *request){
@@ -55,27 +59,34 @@ void startServer(JsonObject& config){
 		request->send_P(200, "application/json",savedWiFiArr);
 	});
 
-	server.on("/wifi", HTTP_POST, [&] (AsyncWebServerRequest *request){
+	AsyncCallbackJsonWebHandler *handler = new AsyncCallbackJsonWebHandler("/wifi", [&](AsyncWebServerRequest *request, JsonVariant &jsonVar) {
 		Serial.println("Got POST on /wifi");
+		JsonObject& json = jsonVar.as<JsonObject&>();
+
+		if(json.size() != 2){
+			request->send_P(400, "application/json","Error: wrong field count");
+		}
+
 		if(
-			!request->hasParam("ssid") ||
-			!request->hasParam("password")
+			!json.containsKey("ssid") ||
+			!json.containsKey("password")
 		){
-			request->send_P(400, "application/json","Error: missing required parameter ssid or password");
+			request->send_P(400, "application/json","Error: missing required field ssid or password");
 			return;
 		}
-		const char* ssidtoAdd = request->getParam("ssid")->value().c_str();
-		const char* passwordToAdd = request->getParam("password")->value().c_str();
+		const char* ssidToAdd = json["ssid"];
+		const char* passwordToAdd = json["password"];
 
 		Serial.println("Adding wifi config:");
-		StaticJsonBuffer<JSON_OBJECT_SIZE(3)> tmpJsonBuffer;
-		JsonObject& newWiFi = tmpJsonBuffer.createObject();
-		newWiFi.set("ssid", ssidtoAdd);
-		newWiFi.set("password",passwordToAdd);
-		newWiFi.printTo(Serial);Serial.println();
+		json.printTo(Serial);Serial.println();
+		// StaticJsonBuffer<JSON_OBJECT_SIZE(3)> tmpJsonBuffer;
+		// JsonObject& newWiFi = tmpJsonBuffer.createObject();
+		// newWiFi.set("ssid", ssidToAdd);
+		// newWiFi.set("password",passwordToAdd);
+		// newWiFi.printTo(Serial);Serial.println();
 
 		JsonArray& currWiFiNetworks = config["wifi"].as<JsonArray&>();
-		currWiFiNetworks.add(newWiFi);
+		currWiFiNetworks.add(json);
 
 		char configJsonString[1024];
 		config.printTo(configJsonString);
@@ -84,6 +95,8 @@ void startServer(JsonObject& config){
 
 		request->send_P(200, "application/json",configJsonString);
 	});
+	handler->setMethod(HTTP_POST);
+	server.addHandler(handler);
 
 	server.on("/wifi", HTTP_DELETE, [&](AsyncWebServerRequest *request){
 		Serial.println("Got DELETE on /wifi");
@@ -106,6 +119,8 @@ void startServer(JsonObject& config){
 		config.printTo(configJsonString);
 		request->send_P(200, "application/json",configJsonString);
 	});
+
+	server.onNotFound(notFound);
 
 	server.begin();
 }

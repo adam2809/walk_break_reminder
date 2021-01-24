@@ -28,44 +28,68 @@ const char config_html[] = R"rawliteral(
     <body>
         <h2>ESP Strava Tracker config</h2>
 
-        <h3>Current wifi network:<h3>
-        %CURRENT_WIFI_SSID%
+        <h3>Current wifi network:</h3>
+        <h4>%CURRENT_WIFI_SSID%</h4>
+        <br/>
 
-        <form action="/wifi">
+        <form id='new_wifi_form'>
+            <script>
+                function submitNewWiFiForm(){
+                    console.log('clicked button');
+                    var formData = {};
+                    $('#new_wifi_form').serializeArray().forEach(function(formRow){
+                        formData[formRow['name']] = formRow['value']
+                    });
+
+                    $.ajax({
+                        url:'/wifi',
+                        type:'POST',
+                        contentType:'application/json',
+                        data:JSON.stringify(formData),
+                        success: function(data) {
+                            console.log("Nice POST");
+                        },
+                        failure: function(data) {
+                            console.log("Failed POST");
+                        }
+                    });
+                };
+            </script>
             <label for="ssid">Ssid</label><br>
             <input type="text" id="ssid" name="ssid"><br>
             <label for="password">Password:</label><br>
             <input type="text" id="password" name="password"><br><br>
-            <input type="submit" value="Add network">
+            <input type="button" value="Add network" onClick='submitNewWiFiForm()'>
         </form>
         <h3>Saved wifi networks:</h3>
-        <div id='wifi_table'></div>
-        <script>
-            function makeTable(container, data) {
-                var table = $("<table/>");
-                $.each(data, function(rowIndex, r) {
-                    var row = $("<tr/>");
-                    $.each(r, function(colIndex, c) { 
-                        row.append($("<t"+(rowIndex == 0 ?  "h" : "d")+"/>").text(c));
+        <div id='wifi_table'>
+            <script>
+                function makeTable(container, data) {
+                    var table = $("<table/>");
+                    $.each(data, function(rowIndex, r) {
+                        var row = $("<tr/>");
+                        $.each(r, function(colIndex, c) { 
+                            row.append($("<t"+(rowIndex == 0 ?  "h" : "d")+"/>").text(c));
+                        });
+                        table.append(row);
                     });
-                    table.append(row);
-                });
-                return container.append(table);
-            }
-
-            $(document).ready(function () { 
-                $.get("/wifi")
-                    .done(function(data){
-                        makeTable($('#wifi_table'),[['ssid','password']].concat(
-                            data.map(function(net){return [net.ssid,net.password]})
-                        ))
-                    })
-                    .fail(function(error){
-                        console.log("Error fetching current wifi networks");
-                        console.log(error);
-                    })
-            }); 
-        </script>
+                    return container.append(table);
+                }
+    
+                $(document).ready(function () { 
+                    $.get("/wifi")
+                        .done(function(data){
+                            makeTable($('#wifi_table'),[['ssid','password']].concat(
+                                data.map(function(net){return [net.ssid,net.password]})
+                            ))
+                        })
+                        .fail(function(error){
+                            console.log("Error fetching current wifi networks");
+                            console.log(error);
+                        })
+                }); 
+            </script>
+        </div>
     </body>
 </html>
 )rawliteral";
