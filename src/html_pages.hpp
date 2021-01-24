@@ -5,9 +5,22 @@ const char config_html[] = R"rawliteral(
         <title>ESP Web Server</title>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
-            html {font-family: Arial; display: inline-block; text-align: center;}
-            body {max-width: 600px; margin:0px auto; padding-bottom: 25px;}
-            table {text-align: center;}
+            html {
+                font-family: Arial;
+                display: inline-block;
+                text-align: center;
+            }
+            body {
+                max-width: 600px;
+                margin:0px auto;
+                padding-bottom: 25px;
+            }
+            table {
+                margin-left: auto;
+                margin-right: auto;
+                border: 1px solid black;
+                border-collapse: collapse;
+            }
         </style>  
         <script src = "https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
         <!-- <script src = "//cdn.datatables.net/1.10.23/js/jquery.dataTables.min.js"></script> -->
@@ -29,7 +42,7 @@ const char config_html[] = R"rawliteral(
         <div id='wifi_table'></div>
         <script>
             function makeTable(container, data) {
-                var table = $("<tbody/>");
+                var table = $("<table/>");
                 $.each(data, function(rowIndex, r) {
                     var row = $("<tr/>");
                     $.each(r, function(colIndex, c) { 
