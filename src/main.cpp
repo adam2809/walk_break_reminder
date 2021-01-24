@@ -42,16 +42,16 @@ void uploadTestGpx(){
     );
 }
 
-String configHtmlTemplateProcessor(const String& var){
-
-}
-
 void startServer(JsonObject& config){
+	server.on("/", HTTP_GET, [&](AsyncWebServerRequest *request){
+		Serial.println("Got GET on /");
+		request->send_P(200, "text/html",config_html);
+	});
+
 	server.on("/wifi", HTTP_GET, [&](AsyncWebServerRequest *request){
 		Serial.println("Got GET on /wifi");
 		char configJsonString[1024];
 		config.printTo(configJsonString);
-		// request->send_P(200, "text/html",config_html,configHtmlTemplateProcessor);
 		request->send_P(200, "application/json",configJsonString);
 	});
 
