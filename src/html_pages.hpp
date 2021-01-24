@@ -10,6 +10,7 @@ const char config_html[] = R"rawliteral(
             table {text-align: center;}
         </style>  
         <script src = "https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+        <!-- <script src = "//cdn.datatables.net/1.10.23/js/jquery.dataTables.min.js"></script> -->
     </head>
     <body>
         <h2>ESP Strava Tracker config</h2>
@@ -25,37 +26,33 @@ const char config_html[] = R"rawliteral(
             <input type="submit" value="Add network">
         </form>
         <h3>Saved wifi networks:</h3>
-        <table border=1 frame=void rules=rows>
-            <thead>
-                <tr> 
-                    <th>SSID</th>
-                    <th>Password</th>
-                </tr> 
-            </thead>
-            <tbody id='table_body'>
-                <script> 
-                    $(document).ready(function () { 
-                        $.get("/wifi")
-                            .done(function(data){
-                                data.forEach(network => {
-                                    console.log(network);
-                                    var newRow = '';
-                                    newRow += '</tr>';
-                                    newRow += '<td>' +  network.ssid + '</td>'; 
-                                    newRow += '<td>' + network.password + '</td>';
-                                    newRow += '</tr>';
-                                    console.log(newRow);
-                                    $('#table_body').append(newRow);
-                                });
-                            })
-                            .fail(function(error){
-                                console.log("Error fetching current wifi networks");
-                                console.log(error);
-                            })
-                    }); 
-                </script>
-            </tbody>
-        </table>
+        <div id='wifi_table'></div>
+        <script>
+            function makeTable(container, data) {
+                var table = $("<tbody/>");
+                $.each(data, function(rowIndex, r) {
+                    var row = $("<tr/>");
+                    $.each(r, function(colIndex, c) { 
+                        row.append($("<t"+(rowIndex == 0 ?  "h" : "d")+"/>").text(c));
+                    });
+                    table.append(row);
+                });
+                return container.append(table);
+            }
+
+            $(document).ready(function () { 
+                $.get("/wifi")
+                    .done(function(data){
+                        makeTable($('#wifi_table'),[['ssid','password']].concat(
+                            data.map(function(net){return [net.ssid,net.password]})
+                        ))
+                    })
+                    .fail(function(error){
+                        console.log("Error fetching current wifi networks");
+                        console.log(error);
+                    })
+            }); 
+        </script>
     </body>
 </html>
 )rawliteral";
