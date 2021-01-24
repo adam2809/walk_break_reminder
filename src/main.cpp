@@ -13,10 +13,12 @@
 #define HOST_HEADER "Host", "192.168.0.87"
 #define USER_AGENT_HEADER "User-Agent", "ESP32StravaTracker/0.0.1"
 #define CONTENT_TYPE_HEADER "Content-Type", "application/xml"
+#define JSON_STRING_BUFFER_LENGTH 1024
 
 #define MAX_WIFI_NETWORKS 10
 
-DynamicJsonBuffer jsonBuffer(JSON_ARRAY_SIZE(3) + MAX_WIFI_NETWORKS*JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(2));
+const int capacity = JSON_ARRAY_SIZE(3) + MAX_WIFI_NETWORKS*JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(2);
+DynamicJsonBuffer jsonBufferToDelete(capacity);
 char testGpx[4096];
 HTTPClient http;
 AsyncWebServer server(80);
@@ -46,7 +48,27 @@ void notFound(AsyncWebServerRequest *request){
   request->send(404, "application/json", "{\"message\":\"Not found\"}");
 }
 
-void startServer(JsonObject& config){
+JsonObject& loadConfig(DynamicJsonBuffer& jsonBuffer){
+	String readBuffer;
+
+	if(readFile(SPIFFS, "/config.json",readBuffer)){
+		Serial.println("Read config.json file");
+    }else{
+        Serial.println("Could not load config file");
+	}
+    
+	JsonObject& loadedConfig = jsonBuffer.parseObject(readBuffer);
+	if (loadedConfig.success()){
+		Serial.println("Parsed saved config:");
+		loadedConfig.printTo(Serial);Serial.println();
+	}else{
+		Serial.println("Could not parse config.json");
+	}
+
+	return loadedConfig;
+}
+
+void startServer(JsonObject& configToDelete){
 	server.on("/", HTTP_GET, [&](AsyncWebServerRequest *request){
 		Serial.println("Got GET on /");
 		request->send_P(200, "text/html",config_html);
@@ -54,9 +76,13 @@ void startServer(JsonObject& config){
 
 	server.on("/wifi", HTTP_GET, [&](AsyncWebServerRequest *request){
 		Serial.println("Got GET on /wifi");
-		char savedWiFiArr[1024];
+		DynamicJsonBuffer jsonBuffer(capacity);
+		JsonObject& config = loadConfig(jsonBuffer);
+
+		char savedWiFiArr[JSON_STRING_BUFFER_LENGTH];
 		config["wifi"].printTo(savedWiFiArr);
 		request->send_P(200, "application/json",savedWiFiArr);
+		jsonBuffer.clear();
 	});
 
 	AsyncCallbackJsonWebHandler *handler = new AsyncCallbackJsonWebHandler("/wifi", [&](AsyncWebServerRequest *request, JsonVariant &jsonVar) {
@@ -74,27 +100,24 @@ void startServer(JsonObject& config){
 			request->send_P(400, "application/json","Error: missing required field ssid or password");
 			return;
 		}
-		const char* ssidToAdd = json["ssid"];
-		const char* passwordToAdd = json["password"];
 
 		Serial.println("Adding wifi config:");
 		json.printTo(Serial);Serial.println();
-		// StaticJsonBuffer<JSON_OBJECT_SIZE(3)> tmpJsonBuffer;
-		// JsonObject& newWiFi = tmpJsonBuffer.createObject();
-		// newWiFi.set("ssid", ssidToAdd);
-		// newWiFi.set("password",passwordToAdd);
-		// newWiFi.printTo(Serial);Serial.println();
+
+		DynamicJsonBuffer jsonBuffer(capacity);
+		JsonObject& config = loadConfig(jsonBuffer);
 
 		JsonArray& currWiFiNetworks = config["wifi"].as<JsonArray&>();
 		currWiFiNetworks.add(json);
-		char wifiArrJsonString[1024];
+		char wifiArrJsonString[JSON_STRING_BUFFER_LENGTH];
 		currWiFiNetworks.printTo(wifiArrJsonString);
 
-		char configJsonString[1024];
+		char configJsonString[JSON_STRING_BUFFER_LENGTH];
 		config.printTo(configJsonString);
 		writeFile(SPIFFS, "/config.json", configJsonString);
 
 		request->send_P(200, "application/json",wifiArrJsonString);
+		jsonBuffer.clear();
 	});
 	handler->setMethod(HTTP_POST);
 	server.addHandler(handler);
@@ -106,6 +129,9 @@ void startServer(JsonObject& config){
 			return;
 		}
 		const char* ssidToDelete = request->getParam("ssid")->value().c_str();
+
+		DynamicJsonBuffer jsonBuffer(capacity);
+		JsonObject& config = loadConfig(jsonBuffer);
 		JsonArray& currWiFiNetworks = config["wifi"].as<JsonArray&>();
 
 		for (int i=0; i<currWiFiNetworks.size(); i++) {
@@ -116,13 +142,18 @@ void startServer(JsonObject& config){
 			}
 		}
 
-		char configJsonString[1024];
+		char configJsonString[JSON_STRING_BUFFER_LENGTH];
 		config.printTo(configJsonString);
-		request->send_P(200, "application/json",configJsonString);
+		writeFile(SPIFFS, "/config.json", configJsonString);
+
+		char wifiArrJsonString[JSON_STRING_BUFFER_LENGTH];
+		currWiFiNetworks.printTo(wifiArrJsonString);
+
+		request->send_P(200, "application/json",wifiArrJsonString);
+		jsonBuffer.clear();
 	});
 
 	server.onNotFound(notFound);
-
 	server.begin();
 }
 
@@ -143,7 +174,7 @@ void setup() {
 		return;
 	}
     
-	JsonObject& config = jsonBuffer.parseObject(readBuffer);
+	JsonObject& config = jsonBufferToDelete.parseObject(readBuffer);
 	if (config.success()){
 		Serial.println("Parsed saved config:");
 		config.printTo(Serial);Serial.println();
