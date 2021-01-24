@@ -37,7 +37,7 @@ const char config_html[] = R"rawliteral(
                     $(document).ready(function () { 
                         $.get("/wifi")
                             .done(function(data){
-                                data['wifi'].forEach(network => {
+                                data.forEach(network => {
                                     console.log(network);
                                     var newRow = '';
                                     newRow += '</tr>';

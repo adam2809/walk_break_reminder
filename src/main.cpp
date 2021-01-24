@@ -50,9 +50,9 @@ void startServer(JsonObject& config){
 
 	server.on("/wifi", HTTP_GET, [&](AsyncWebServerRequest *request){
 		Serial.println("Got GET on /wifi");
-		char configJsonString[1024];
-		config.printTo(configJsonString);
-		request->send_P(200, "application/json",configJsonString);
+		char savedWiFiArr[1024];
+		config["wifi"].printTo(savedWiFiArr);
+		request->send_P(200, "application/json",savedWiFiArr);
 	});
 
 	server.on("/wifi", HTTP_POST, [&] (AsyncWebServerRequest *request){
