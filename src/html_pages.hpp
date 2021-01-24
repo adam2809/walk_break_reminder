@@ -30,8 +30,8 @@ const char config_html[] = R"rawliteral(
 
         <h3>Current wifi network:</h3>
         <h4>%CURRENT_WIFI_SSID%</h4>
-        <br/>
 
+        <h3>Add new wifi network:</h3>
         <form id='new_wifi_form'>
             <script>
                 function submitNewWiFiForm(){
@@ -71,9 +71,30 @@ const char config_html[] = R"rawliteral(
                         $.each(r, function(colIndex, c) { 
                             row.append($("<t"+(rowIndex == 0 ?  "h" : "d")+"/>").text(c));
                         });
+                        if(rowIndex!=0) {
+                            const deleteCol = $("<td/>")
+                            const deleteButton = $("<button/>")
+                            deleteButton.attr('onClick',`deleteWifi('${r[0]}')`);
+                            deleteButton.attr('type',"button");
+                            deleteCol.append(deleteButton);
+                            row.append(deleteCol)
+                        }
                         table.append(row);
                     });
                     return container.append(table);
+                }
+
+                function deleteWifi(ssid){
+                    $.ajax({
+                        url:`/wifi?ssid=${ssid}`,
+                        type:'DELETE',
+                        success: function(data) {
+                            fillTableWithWiFiArray(data);
+                        },
+                        failure: function(data) {
+                            console.log("Failed DELETE");
+                        }
+                    })
                 }
 
                 function fillTableWithWiFiArray(wifiArr){
