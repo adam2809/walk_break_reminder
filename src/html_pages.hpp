@@ -47,7 +47,7 @@ const char config_html[] = R"rawliteral(
                         contentType:'application/json',
                         data:JSON.stringify(formData),
                         success: function(data) {
-                            console.log("Nice POST");
+                            fillTableWithWiFiArray(data);
                         },
                         failure: function(data) {
                             console.log("Failed POST");
@@ -75,13 +75,18 @@ const char config_html[] = R"rawliteral(
                     });
                     return container.append(table);
                 }
+
+                function fillTableWithWiFiArray(wifiArr){
+                    $('#wifi_table').empty();
+                    makeTable($('#wifi_table'),[['ssid','password']].concat(
+                        wifiArr.map(function(net){return [net.ssid,net.password]})
+                    ))
+                }
     
                 $(document).ready(function () { 
                     $.get("/wifi")
                         .done(function(data){
-                            makeTable($('#wifi_table'),[['ssid','password']].concat(
-                                data.map(function(net){return [net.ssid,net.password]})
-                            ))
+                            fillTableWithWiFiArray(data);
                         })
                         .fail(function(error){
                             console.log("Error fetching current wifi networks");

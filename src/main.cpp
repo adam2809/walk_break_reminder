@@ -87,13 +87,14 @@ void startServer(JsonObject& config){
 
 		JsonArray& currWiFiNetworks = config["wifi"].as<JsonArray&>();
 		currWiFiNetworks.add(json);
+		char wifiArrJsonString[1024];
+		currWiFiNetworks.printTo(wifiArrJsonString);
 
 		char configJsonString[1024];
 		config.printTo(configJsonString);
-
 		writeFile(SPIFFS, "/config.json", configJsonString);
 
-		request->send_P(200, "application/json",configJsonString);
+		request->send_P(200, "application/json",wifiArrJsonString);
 	});
 	handler->setMethod(HTTP_POST);
 	server.addHandler(handler);
