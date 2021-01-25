@@ -22,6 +22,7 @@ DynamicJsonBuffer jsonBufferToDelete(capacity);
 char testGpx[4096];
 HTTPClient http;
 AsyncWebServer server(80);
+char currSsid[32];
 
 void uploadTestGpx(){
 	String uploadActivityHeaders[] = {
@@ -48,6 +49,13 @@ void notFound(AsyncWebServerRequest *request){
   request->send(404, "application/json", "{\"message\":\"Not found\"}");
 }
 
+String templateProcessor(const String& var){
+	if(var == "CURRENT_WIFI_SSID"){
+		return currSsid;
+	}
+	return String();
+}
+
 JsonObject& loadConfig(DynamicJsonBuffer& jsonBuffer){
 	String readBuffer;
 
@@ -71,7 +79,7 @@ JsonObject& loadConfig(DynamicJsonBuffer& jsonBuffer){
 void startServer(JsonObject& configToDelete){
 	server.on("/", HTTP_GET, [&](AsyncWebServerRequest *request){
 		Serial.println("Got GET on /");
-		request->send_P(200, "text/html",config_html);
+		request->send_P(200, "text/html",config_html,templateProcessor);
 	});
 
 	server.on("/wifi", HTTP_GET, [&](AsyncWebServerRequest *request){
@@ -187,8 +195,9 @@ void setup() {
         Serial.println("Could not test gpx file");
     }
     readBuffer.toCharArray(testGpx,readBuffer.length());
-
+	
 	connectToWiFi(config["wifi"][0]["ssid"],config["wifi"][0]["password"]);
+	config["wifi"][0]["ssid"].printTo(currSsid);
 
 	startServer(config);
 }
