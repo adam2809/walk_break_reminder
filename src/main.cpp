@@ -191,11 +191,7 @@ void setup() {
 		return;
 	}
 	
-    // if(!readFile(SPIFFS, "/test.gpx",readBuffer)){
-    //     Serial.println("Could not test gpx file");
-    // }
-    // readBuffer.toCharArray(testGpx,readBuffer.length());
-	
+	WiFi.mode(WIFI_AP_STA); 
 	connectToWiFi(config["wifi"][0]["ssid"],config["wifi"][0]["password"]);
 	config["wifi"][0]["ssid"].printTo(currSsid);
 

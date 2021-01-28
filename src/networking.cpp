@@ -2,7 +2,6 @@
 
 void connectToWiFi(const char* ssid,const char* password){
 	Serial.print("Trying to connect to WiFi with SSID = ");Serial.print(ssid);Serial.print(" and password ");Serial.print(password);Serial.println();
-	WiFi.mode(WIFI_STA);
 	WiFi.begin(ssid, password);
 	Serial.print("Connecting to ");Serial.println(ssid);
 
