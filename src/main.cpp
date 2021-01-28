@@ -18,7 +18,6 @@
 #define MAX_WIFI_NETWORKS 10
 
 const int capacity = JSON_ARRAY_SIZE(3) + MAX_WIFI_NETWORKS*JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(2);
-DynamicJsonBuffer jsonBufferToDelete(capacity);
 char testGpx[4096];
 HTTPClient http;
 AsyncWebServer server(80);
@@ -76,7 +75,7 @@ JsonObject& loadConfig(DynamicJsonBuffer& jsonBuffer){
 	return loadedConfig;
 }
 
-void startServer(JsonObject& configToDelete){
+void startServer(){
 	server.on("/", HTTP_GET, [&](AsyncWebServerRequest *request){
 		Serial.println("Got GET on /");
 		request->send_P(200, "text/html",config_html,templateProcessor);
@@ -182,7 +181,8 @@ void setup() {
 		return;
 	}
     
-	JsonObject& config = jsonBufferToDelete.parseObject(readBuffer);
+	DynamicJsonBuffer jsonBuffer(capacity);
+	JsonObject& config = jsonBuffer.parseObject(readBuffer);
 	if (config.success()){
 		Serial.println("Parsed saved config:");
 		config.printTo(Serial);Serial.println();
@@ -191,15 +191,22 @@ void setup() {
 		return;
 	}
 	
-    if(!readFile(SPIFFS, "/test.gpx",readBuffer)){
-        Serial.println("Could not test gpx file");
-    }
-    readBuffer.toCharArray(testGpx,readBuffer.length());
+    // if(!readFile(SPIFFS, "/test.gpx",readBuffer)){
+    //     Serial.println("Could not test gpx file");
+    // }
+    // readBuffer.toCharArray(testGpx,readBuffer.length());
 	
 	connectToWiFi(config["wifi"][0]["ssid"],config["wifi"][0]["password"]);
 	config["wifi"][0]["ssid"].printTo(currSsid);
 
-	startServer(config);
+	Serial.print("Setting AP…");
+	WiFi.softAP(config["ap"]["ssid"], config["ap"]["password"]);
+
+	IPAddress IP = WiFi.softAPIP();
+	Serial.print("AP IP address: ");Serial.println(IP);
+
+	jsonBuffer.clear();
+	startServer();
 }
 
 void loop() {
