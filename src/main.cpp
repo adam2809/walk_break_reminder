@@ -39,9 +39,10 @@ void uploadTestGpx(){
 		http,
         "POST",
         "/uploads",
-        testGpx,
+        "",
         uploadActivityHeaders,
-        6
+        6,
+		testGpx
     );
 }
 void notFound(AsyncWebServerRequest *request){
@@ -55,25 +56,26 @@ String templateProcessor(const String& var){
 	return String();
 }
 
+JsonObject& parseJson(DynamicJsonBuffer& jsonBuffer,String json){
+	JsonObject& parsedJson = jsonBuffer.parseObject(json);
+
+	if (parsedJson.success()){
+		Serial.println("Parsed json:");
+		parsedJson.printTo(Serial);Serial.println();
+	}else{
+		Serial.println("Could not parse json");
+	}
+
+	return parsedJson;
+}
+
 JsonObject& loadConfig(DynamicJsonBuffer& jsonBuffer){
 	String readBuffer;
-
-	if(readFile(SPIFFS, "/config.json",readBuffer)){
-		Serial.println("Read config.json file");
-    }else{
-        Serial.println("Could not load config file");
-	}
-    
-	JsonObject& loadedConfig = jsonBuffer.parseObject(readBuffer);
-	if (loadedConfig.success()){
-		Serial.println("Parsed saved config:");
-		loadedConfig.printTo(Serial);Serial.println();
-	}else{
-		Serial.println("Could not parse config.json");
-	}
-
-	return loadedConfig;
+	readFile(SPIFFS, "/config.json",readBuffer);
+	return parseJson(jsonBuffer,readBuffer);
 }
+
+
 
 void startServer(){
 	server.on("/", HTTP_GET, [&](AsyncWebServerRequest *request){
@@ -160,6 +162,45 @@ void startServer(){
 		jsonBuffer.clear();
 	});
 
+	server.on("/submit_esp_code", HTTP_POST, [&](AsyncWebServerRequest *request){
+		Serial.println("Got POST on /submit_esp_code");
+		if(!request->hasParam("esp_code")){
+			request->send_P(400, "application/json","Error: missing required parameter esp_code");
+			return;
+		}
+		const char* espCode = request->getParam("esp_code")->value().c_str();
+		String key = "esp_code=";
+
+		http.begin(SUPPORT_SERVER_URL + String("/tokens"));
+		int httpResponseCode = http.POST(key+espCode);
+		if (httpResponseCode < 0){
+			request->send_P(500, "text/plain","Error while making request for tokens");
+		}
+		
+		String resJson = http.getString();
+
+		http.end();
+
+		if(httpResponseCode == 200){
+			DynamicJsonBuffer currConfigJsonBuffer(capacity);
+			DynamicJsonBuffer responseJsonBuffer(capacity);
+
+			JsonObject& config = loadConfig(currConfigJsonBuffer);
+			JsonObject& response = parseJson(responseJsonBuffer,resJson);
+
+			config["refresh_token"] = response["refresh_token"];
+			config["access_token"] = response["access_token"];
+
+			char configJsonString[JSON_STRING_BUFFER_LENGTH];
+			config.printTo(configJsonString);
+			writeFile(SPIFFS, "/config.json", configJsonString);
+			currConfigJsonBuffer.clear();
+			responseJsonBuffer.clear();
+		}
+
+		request->send_P(httpResponseCode, "application/json",resJson.c_str());
+	});
+
 	server.onNotFound(notFound);
 	server.begin();
 }
@@ -174,12 +215,7 @@ void setup() {
 		Serial.println("An Error has occurred while mounting SPIFFS");  
 	}
 
-    if(readFile(SPIFFS, "/config.json",readBuffer)){
-		Serial.println("Read config.json file");
-    }else{
-        Serial.println("Could not load config file");
-		return;
-	}
+    readFile(SPIFFS, "/config.json",readBuffer);
     
 	DynamicJsonBuffer jsonBuffer(capacity);
 	JsonObject& config = jsonBuffer.parseObject(readBuffer);
