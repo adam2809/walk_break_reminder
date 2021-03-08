@@ -116,6 +116,26 @@ const char config_html[] = R"rawliteral(
                 }); 
             </script>
         </div>
+        <br>
+        <div>
+            <script>                
+                function submitEspCode(){
+                    $.ajax({
+                            url:`/submit_esp_code?esp_code=${$('#esp_code').val()}`,
+                            type:'POST',
+                            success: function(data) {
+                                console.log("suceessful esp code submit")
+                            },
+                            failure: function(data) {
+                                console.log("failed esp code submit")
+                            }
+                        })
+                }
+            </script>
+            <label for="esp_code">Type in the esp code to log in on this device:</label><br>
+            <input type="text" id="esp_code" name="esp_code"><br>
+            <input type="button" value="Submit" onClick="submitEspCode()">
+        </div>
     </body>
 </html>
 )rawliteral";
