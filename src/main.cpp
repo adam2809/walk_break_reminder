@@ -169,17 +169,14 @@ void startServer(){
 			return;
 		}
 		const char* espCode = request->getParam("esp_code")->value().c_str();
-		String key = "esp_code=";
 
-		http.begin(SUPPORT_SERVER_URL + String("/tokens"));
-		int httpResponseCode = http.POST(key+espCode);
+		http.begin(SUPPORT_SERVER_URL + String("/tokens?esp_code=") + espCode);
+		int httpResponseCode = http.GET();
 		if (httpResponseCode < 0){
 			request->send_P(500, "text/plain","Error while making request for tokens");
 		}
 		
 		String resJson = http.getString();
-
-		http.end();
 
 		if(httpResponseCode == 200){
 			DynamicJsonBuffer currConfigJsonBuffer(capacity);
@@ -187,6 +184,11 @@ void startServer(){
 
 			JsonObject& config = loadConfig(currConfigJsonBuffer);
 			JsonObject& response = parseJson(responseJsonBuffer,resJson);
+			
+			if(!(response.containsKey("refresh_token") && response.containsKey("access_token"))){
+				request->send_P(500, "text/plain","The tokens request response does not contain required data");
+				return;
+			}
 
 			config["refresh_token"] = response["refresh_token"];
 			config["access_token"] = response["access_token"];
@@ -199,6 +201,7 @@ void startServer(){
 		}
 
 		request->send_P(httpResponseCode, "application/json",resJson.c_str());
+		http.end();
 	});
 
 	server.onNotFound(notFound);
