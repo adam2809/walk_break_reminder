@@ -56,26 +56,6 @@ String templateProcessor(const String& var){
 	return String();
 }
 
-JsonObject& parseJson(DynamicJsonBuffer& jsonBuffer,String json){
-	JsonObject& parsedJson = jsonBuffer.parseObject(json);
-
-	if (parsedJson.success()){
-		Serial.println("Parsed json:");
-		parsedJson.printTo(Serial);Serial.println();
-	}else{
-		Serial.println("Could not parse json");
-	}
-
-	return parsedJson;
-}
-
-JsonObject& loadConfig(DynamicJsonBuffer& jsonBuffer){
-	String readBuffer;
-	readFile(SPIFFS, "/config.json",readBuffer);
-	return parseJson(jsonBuffer,readBuffer);
-}
-
-
 
 void startServer(){
 	server.on("/", HTTP_GET, [&](AsyncWebServerRequest *request){
