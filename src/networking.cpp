@@ -37,5 +37,6 @@ String performSupportServerRequest(HTTPClient& http,const char* method,String en
 	}
 
 	http.end();
+	return "";
 }
 

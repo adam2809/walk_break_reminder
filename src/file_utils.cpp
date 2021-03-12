@@ -66,3 +66,9 @@ void listDir(fs::FS &fs, const char * dirname, uint8_t levels){
         file = root.openNextFile();
     }
 }
+
+JsonObject& loadConfig(DynamicJsonBuffer& jsonBuffer){
+	String readBuffer;
+	readFile(SPIFFS, "/config.json",readBuffer);
+	return parseJson(jsonBuffer,readBuffer);
+}
