@@ -13,3 +13,12 @@ JsonObject& parseJson(DynamicJsonBuffer& jsonBuffer,String json){
 	return parsedJson;
 }
 
+bool arrContainsKey(JsonArray& arr,String key){
+	for (int i = 0; i < arr.size(); i++){
+		if(arr.get<String>(i) == key){
+			return true;
+		}
+	}
+	return false;
+}
+
