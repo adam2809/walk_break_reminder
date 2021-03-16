@@ -47,7 +47,6 @@ int scanForSavedWifiNetworks(JsonArray& savedWiFiNetworks){
     int n = WiFi.scanNetworks();
 
     if (n == 0) {
-        Serial.println("No networks found");
 		return -1;
     }
 
