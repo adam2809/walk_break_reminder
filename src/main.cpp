@@ -1,4 +1,5 @@
 #include "onboard_web_server.hpp"
+#include "motion_detection.hpp"
 
 #define ACCEPT_HEADER "Accept", "*/*"
 #define ACCEPT_ENCODING_HEADER "Accept-Encoding", "gzip, deflate"
@@ -12,6 +13,8 @@ char testGpx[4096];
 
 void setup() {
 	Serial.begin(115200);
+  	configureMPU(1); 
+
 	String readBuffer;
 
 	if(!SPIFFS.begin()){ 
