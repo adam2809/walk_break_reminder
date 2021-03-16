@@ -43,17 +43,12 @@ int indexOfSsidInWifiArr(JsonArray& arr,String ssid){
 Scans for networks and returns index of found wifi network or -1 in none found
 */
 int scanForSavedWifiNetworks(JsonArray& savedWiFiNetworks){
-    Serial.println("Starting to scan for networks");
     int n = WiFi.scanNetworks();
 
     if (n == 0) {
 		return -1;
     }
-
-	Serial.print(n);
-	Serial.println(" networks found:");
 	for (int i = 0; i < n; ++i) {
-		printWifiNetworkStats(i);
 		String currSsid = WiFi.SSID(i);
 		if(indexOfSsidInWifiArr(savedWiFiNetworks,currSsid) != -1){
 			return i;

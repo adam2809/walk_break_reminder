@@ -12,42 +12,55 @@
 
 char testGpx[4096];
 unsigned long prevMillis = 8000;
+unsigned long walkStartMilis = -1;
+
+bool attemptConnectionToSavedWifi(){
+	Serial.println("Trying to connect to a saved wifi network");
+
+	DynamicJsonBuffer jsonBuffer(capacity);
+	JsonObject& config = loadConfig(jsonBuffer);
+
+	int found = scanForSavedWifiNetworks(config["wifi"].as<JsonArray&>());
+	if(found == -1){
+		Serial.println("No available saved networks");
+		return false;
+	}
+	Serial.print("Found network with ssid: ");Serial.println(config["wifi"].as<JsonArray&>()[found].as<JsonObject&>()["ssid"].as<String>());
+	connectToWiFi(config["wifi"][found]["ssid"],config["wifi"][found]["password"]);
+
+	jsonBuffer.clear();
+
+	return true;
+}
 
 void setup() {
 	Serial.begin(115200);
-  	configureMPU(1); 
-
-	String readBuffer;
+  	// configureMPU(1);
 
 	if(!SPIFFS.begin()){ 
 		Serial.println("An Error has occurred while mounting SPIFFS");  
 	}
     
-	WiFi.mode(WIFI_AP_STA); 
+	WiFi.mode(WIFI_AP_STA);
+	attemptConnectionToSavedWifi();
 }
 
 void loop() {
 	unsigned long currentMillis = millis();
 
-	if (currentMillis - prevMillis >= WIFI_CONN_POLLING_INTERVAL) {
+	if(walkStartMilis == -1){
 		if(WiFi.status() != WL_CONNECTED){
-			Serial.println("Trying to connect to a saved wifi network");
-
-			DynamicJsonBuffer jsonBuffer(capacity);
-			JsonObject& config = loadConfig(jsonBuffer);
-
-			int found = scanForSavedWifiNetworks(config["wifi"].as<JsonArray&>());
-			if(found == -1){
-				Serial.println("No available saved networks");
-				prevMillis = currentMillis;
-				return;
-			}
-			Serial.print("Found network with ssid: ");Serial.println(config["wifi"].as<JsonArray&>()[found].as<JsonObject&>()["ssid"].as<String>());
-			connectToWiFi(config["wifi"][found]["ssid"],config["wifi"][found]["password"]);
-
-			jsonBuffer.clear();
+			walkStartMilis = millis();
+			Serial.print("Started walk at: ");Serial.println(walkStartMilis);
 		}
-		prevMillis = currentMillis;
+	}else{
+		if(currentMillis - prevMillis >= WIFI_CONN_POLLING_INTERVAL) {
+			if(attemptConnectionToSavedWifi()){
+				Serial.print("Finished walk duration was: ");Serial.println(millis() - walkStartMilis);
+				walkStartMilis = -1;
+			}
+			prevMillis = millis();
+		}
 	}
-
+	WiFi.status();
 }
