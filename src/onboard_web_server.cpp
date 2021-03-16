@@ -12,6 +12,19 @@ void startServer(char* _currSsid){
 		request->send_P(200, "text/html",config_html,templateProcessor);
 	});
 
+
+	server.on("/sleep", HTTP_GET, [&](AsyncWebServerRequest *request){
+		Serial.println("Got GET on /sleep");
+		request->send_P(200, "text/html","goin to slp");
+
+
+		Serial.println("Sleeping");
+		adc_power_off();  // adc power off disables wifi entirely, upstream bug
+		esp_sleep_enable_ext0_wakeup(GPIO_NUM_15,0); delay(1500);//1 = High, 0 = Low
+		adc_power_off();
+		esp_deep_sleep_start();
+	});
+
 	server.on("/wifi", HTTP_GET, getAllWifiNetworks);
 	server.on("/wifi", HTTP_DELETE, deleteWifiNetwork);
 	AsyncCallbackJsonWebHandler *handler = new AsyncCallbackJsonWebHandler("/wifi", addNewWifiNetwork);

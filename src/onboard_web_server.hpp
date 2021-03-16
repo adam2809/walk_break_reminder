@@ -6,6 +6,7 @@
 #include "file_utils.hpp"
 #include "networking.hpp"
 #include "html_pages.hpp"
+#include <driver/adc.h>
 
 #define JSON_STRING_BUFFER_LENGTH 1024
 #define MAX_WIFI_NETWORKS 10
