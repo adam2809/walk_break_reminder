@@ -136,6 +136,24 @@ const char config_html[] = R"rawliteral(
             <input type="text" id="esp_code" name="esp_code"><br>
             <input type="button" value="Submit" onClick="submitEspCode()">
         </div>
+        <br>
+        <div>
+            <script>                
+                function sleep(){
+                    $.ajax({
+                            url:`/sleep`,
+                            type:'GET',
+                            success: function(data) {
+                                console.log("ESP went to sleep")
+                            },
+                            failure: function(data) {
+                                console.log("Insomniac esp")
+                            }
+                        })
+                }
+            </script>
+            <input type="button" value="Sleep" onClick="sleep()">
+        </div>
     </body>
 </html>
 )rawliteral";
