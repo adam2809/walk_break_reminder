@@ -4,10 +4,11 @@ JsonObject& parseJson(DynamicJsonBuffer& jsonBuffer,String json){
 	JsonObject& parsedJson = jsonBuffer.parseObject(json);
 
 	if (parsedJson.success()){
-		Serial.println("Parsed json:");
-		parsedJson.printTo(Serial);Serial.println();
+		String parsed;
+		parsedJson.printTo(parsed);
+		log_v("Parsed json: %s",parsed);
 	}else{
-		Serial.println("Could not parse json");
+		log_w("Could not parse json: %s", json);
 	}
 
 	return parsedJson;

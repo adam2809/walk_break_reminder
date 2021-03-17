@@ -8,17 +8,17 @@ void startServer(char* _currSsid){
 	currSsid = _currSsid;
 
 	server.on("/", HTTP_GET, [&](AsyncWebServerRequest *request){
-		Serial.println("Got GET on /");
+		log_i("Got GET on /");
 		request->send_P(200, "text/html",config_html,templateProcessor);
 	});
 
 
 	server.on("/sleep", HTTP_GET, [&](AsyncWebServerRequest *request){
-		Serial.println("Got GET on /sleep");
+		log_i("Got GET on /sleep");
 		request->send_P(200, "text/html","goin to slp");
 
 
-		Serial.println("Sleeping");
+		log_i("Sleeping");
 		adc_power_off();  // adc power off disables wifi entirely, upstream bug
 		esp_sleep_enable_ext0_wakeup(GPIO_NUM_15,0); delay(1500);//1 = High, 0 = Low
 		adc_power_off();
@@ -52,7 +52,7 @@ String templateProcessor(const String& var){
 
 
 void getAllWifiNetworks(AsyncWebServerRequest *request){
-		Serial.println("Got GET on /wifi");
+		log_i("Got GET on /wifi");
 		DynamicJsonBuffer jsonBuffer(capacity);
 		JsonObject& config = loadConfig(jsonBuffer);
 
@@ -63,7 +63,7 @@ void getAllWifiNetworks(AsyncWebServerRequest *request){
 }
 
 void addNewWifiNetwork(AsyncWebServerRequest *request, JsonVariant &jsonVar){
-	Serial.println("Got POST on /wifi");
+	log_i("Got POST on /wifi");
 	JsonObject& json = jsonVar.as<JsonObject&>();
 
 	if(json.size() != 2){
@@ -78,8 +78,9 @@ void addNewWifiNetwork(AsyncWebServerRequest *request, JsonVariant &jsonVar){
 		return;
 	}
 
-	Serial.println("Adding wifi config:");
-	json.printTo(Serial);Serial.println();
+	String newConfig;
+	json.printTo(newConfig);
+	log_i("Adding wifi config: %s",newConfig);
 
 	DynamicJsonBuffer jsonBuffer(capacity);
 	JsonObject& config = loadConfig(jsonBuffer);
@@ -98,7 +99,7 @@ void addNewWifiNetwork(AsyncWebServerRequest *request, JsonVariant &jsonVar){
 }
 
 void deleteWifiNetwork(AsyncWebServerRequest *request){
-		Serial.println("Got DELETE on /wifi");
+		log_i("Got DELETE on /wifi");
 		if(!request->hasParam("ssid")){
 			request->send_P(400, "application/json","Error: missing required parameter ssid");
 			return;
@@ -111,7 +112,7 @@ void deleteWifiNetwork(AsyncWebServerRequest *request){
 
 		for (int i=0; i<currWiFiNetworks.size(); i++) {
 			if(currWiFiNetworks[i]["ssid"] == ssidToDelete){
-				Serial.print("Removing ");Serial.println(ssidToDelete);
+				log_i("Removing %s",ssidToDelete);
 				currWiFiNetworks.remove(i);
 				break;
 			}
@@ -129,7 +130,7 @@ void deleteWifiNetwork(AsyncWebServerRequest *request){
 }
 
 void submitEspCode(AsyncWebServerRequest *request){
-	Serial.println("Got POST on /submit_esp_code");
+	log_i("Got POST on /submit_esp_code");
 	if(!request->hasParam("esp_code")){
 		request->send_P(400, "application/json","Error: missing required parameter esp_code");
 		return;

@@ -15,17 +15,17 @@ unsigned long prevMillis = 8000;
 unsigned long walkStartMilis = -1;
 
 bool attemptConnectionToSavedWifi(){
-	Serial.println("Trying to connect to a saved wifi network");
+	log_d("Trying to connect to a saved wifi network");
 
 	DynamicJsonBuffer jsonBuffer(capacity);
 	JsonObject& config = loadConfig(jsonBuffer);
 
 	int found = scanForSavedWifiNetworks(config["wifi"].as<JsonArray&>());
 	if(found == -1){
-		Serial.println("No available saved networks");
+		log_d("No available saved networks");
 		return false;
 	}
-	Serial.print("Found network with ssid: ");Serial.println(config["wifi"].as<JsonArray&>()[found].as<JsonObject&>()["ssid"].as<String>());
+	log_d("Found (index=%d) network with ssid: %s",found,config["wifi"].as<JsonArray&>()[found].as<JsonObject&>()["ssid"].as<String>());
 	connectToWiFi(config["wifi"][found]["ssid"],config["wifi"][found]["password"]);
 
 	jsonBuffer.clear();
@@ -38,7 +38,7 @@ void setup() {
   	// configureMPU(1);
 
 	if(!SPIFFS.begin()){ 
-		Serial.println("An Error has occurred while mounting SPIFFS");  
+		log_e("An Error has occurred while mounting SPIFFS");  
 	}
     
 	WiFi.mode(WIFI_AP_STA);
@@ -51,12 +51,13 @@ void loop() {
 	if(walkStartMilis == -1){
 		if(WiFi.status() != WL_CONNECTED){
 			walkStartMilis = millis();
-			Serial.print("Started walk at: ");Serial.println(walkStartMilis);
+			WiFi.disconnect();
+			log_i("Started walk at: %d",walkStartMilis);
 		}
 	}else{
 		if(currentMillis - prevMillis >= WIFI_CONN_POLLING_INTERVAL) {
 			if(attemptConnectionToSavedWifi()){
-				Serial.print("Finished walk duration was: ");Serial.println(millis() - walkStartMilis);
+				log_i("Finished walk duration was: %d",millis() - walkStartMilis);
 				walkStartMilis = -1;
 			}
 			prevMillis = millis();
