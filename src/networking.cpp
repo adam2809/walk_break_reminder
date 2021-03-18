@@ -43,8 +43,9 @@ int scanForSavedWifiNetworks(JsonArray& savedWiFiNetworks){
     }
 	for (int i = 0; i < n; ++i) {
 		logWifiNetworkStats(i);
-		if(indexOfSsidInWifiArr(savedWiFiNetworks,WiFi.SSID(i)) != -1){
-			return i;
+		int found = indexOfSsidInWifiArr(savedWiFiNetworks,WiFi.SSID(i));
+		if(found != -1){
+			return found;
 		}
 	}
 	return -1;
