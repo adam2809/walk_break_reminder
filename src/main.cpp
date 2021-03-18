@@ -42,26 +42,28 @@ void setup() {
 	}
     
 	WiFi.mode(WIFI_AP_STA);
+  	WiFi.disconnect();
+
+	WiFi.onEvent([](WiFiEvent_t event, WiFiEventInfo_t info){
+		log_d("WiFi lost connection. Reason: %d",info.disconnected.reason);
+		if(info.disconnected.reason == 8 || walkStartMilis != -1){
+			return;
+		}
+		walkStartMilis = millis();
+	}, WiFiEvent_t::SYSTEM_EVENT_STA_DISCONNECTED);
+
 	attemptConnectionToSavedWifi();
+
 }
 
 void loop() {
 	unsigned long currentMillis = millis();
 
-	if(walkStartMilis == -1){
-		if(WiFi.status() != WL_CONNECTED){
-			walkStartMilis = millis();
-			WiFi.disconnect();
-			log_i("Started walk at: %d",walkStartMilis);
+	if(walkStartMilis != -1 && currentMillis - prevMillis >= WIFI_CONN_POLLING_INTERVAL) {
+		if(attemptConnectionToSavedWifi()){
+			log_i("Finished walk duration was: %d",millis() - walkStartMilis);
+			walkStartMilis = -1;
 		}
-	}else{
-		if(currentMillis - prevMillis >= WIFI_CONN_POLLING_INTERVAL) {
-			if(attemptConnectionToSavedWifi()){
-				log_i("Finished walk duration was: %d",millis() - walkStartMilis);
-				walkStartMilis = -1;
-			}
-			prevMillis = millis();
-		}
+		prevMillis = millis();
 	}
-	WiFi.status();
 }
