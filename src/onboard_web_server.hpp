@@ -20,3 +20,4 @@ void getAllWifiNetworks(AsyncWebServerRequest *request);
 void addNewWifiNetwork(AsyncWebServerRequest *request, JsonVariant &jsonVar);
 void deleteWifiNetwork(AsyncWebServerRequest *request);
 void submitEspCode(AsyncWebServerRequest *request);
+void createStravaActivity(int walkDuration);

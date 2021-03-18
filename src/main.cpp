@@ -35,13 +35,12 @@ bool attemptConnectionToSavedWifi(){
 
 void setup() {
 	Serial.begin(115200);
-  	// configureMPU(1);
 
 	if(!SPIFFS.begin()){ 
 		log_e("An Error has occurred while mounting SPIFFS");  
 	}
     
-	WiFi.mode(WIFI_AP_STA);
+	WiFi.mode(WIFI_STA);
   	WiFi.disconnect();
 
 	WiFi.onEvent([](WiFiEvent_t event, WiFiEventInfo_t info){
@@ -53,7 +52,7 @@ void setup() {
 	}, WiFiEvent_t::SYSTEM_EVENT_STA_DISCONNECTED);
 
 	attemptConnectionToSavedWifi();
-
+	createStravaActivity(59);
 }
 
 void loop() {

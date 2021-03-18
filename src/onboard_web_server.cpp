@@ -1,8 +1,8 @@
 #include "onboard_web_server.hpp"
 
 AsyncWebServer server(80);
-HTTPClient http;
 char* currSsid;
+HTTPClient http;
 
 void startServer(char* _currSsid){
 	currSsid = _currSsid;
@@ -99,34 +99,34 @@ void addNewWifiNetwork(AsyncWebServerRequest *request, JsonVariant &jsonVar){
 }
 
 void deleteWifiNetwork(AsyncWebServerRequest *request){
-		log_i("Got DELETE on /wifi");
-		if(!request->hasParam("ssid")){
-			request->send_P(400, "application/json","Error: missing required parameter ssid");
-			return;
+	log_i("Got DELETE on /wifi");
+	if(!request->hasParam("ssid")){
+		request->send_P(400, "application/json","Error: missing required parameter ssid");
+		return;
+	}
+	const char* ssidToDelete = request->getParam("ssid")->value().c_str();
+
+	DynamicJsonBuffer jsonBuffer(capacity);
+	JsonObject& config = loadConfig(jsonBuffer);
+	JsonArray& currWiFiNetworks = config["wifi"].as<JsonArray&>();
+
+	for (int i=0; i<currWiFiNetworks.size(); i++) {
+		if(currWiFiNetworks[i]["ssid"] == ssidToDelete){
+			log_i("Removing %s",ssidToDelete);
+			currWiFiNetworks.remove(i);
+			break;
 		}
-		const char* ssidToDelete = request->getParam("ssid")->value().c_str();
+	}
 
-		DynamicJsonBuffer jsonBuffer(capacity);
-		JsonObject& config = loadConfig(jsonBuffer);
-		JsonArray& currWiFiNetworks = config["wifi"].as<JsonArray&>();
+	char configJsonString[JSON_STRING_BUFFER_LENGTH];
+	config.printTo(configJsonString);
+	writeFile(SPIFFS, "/config.json", configJsonString);
 
-		for (int i=0; i<currWiFiNetworks.size(); i++) {
-			if(currWiFiNetworks[i]["ssid"] == ssidToDelete){
-				log_i("Removing %s",ssidToDelete);
-				currWiFiNetworks.remove(i);
-				break;
-			}
-		}
+	char wifiArrJsonString[JSON_STRING_BUFFER_LENGTH];
+	currWiFiNetworks.printTo(wifiArrJsonString);
 
-		char configJsonString[JSON_STRING_BUFFER_LENGTH];
-		config.printTo(configJsonString);
-		writeFile(SPIFFS, "/config.json", configJsonString);
-
-		char wifiArrJsonString[JSON_STRING_BUFFER_LENGTH];
-		currWiFiNetworks.printTo(wifiArrJsonString);
-
-		request->send_P(200, "application/json",wifiArrJsonString);
-		jsonBuffer.clear();
+	request->send_P(200, "application/json",wifiArrJsonString);
+	jsonBuffer.clear();
 }
 
 void submitEspCode(AsyncWebServerRequest *request){
@@ -171,3 +171,37 @@ void submitEspCode(AsyncWebServerRequest *request){
 	http.end();
 }
 
+void createStravaActivity(int walkDuration){
+	char millisStr[100];
+	sprintf(millisStr,"%lu",millis());
+	char durationStr[100];
+	sprintf(durationStr,"%d",walkDuration);
+
+	DynamicJsonBuffer jsonBuffer(capacity);
+	JsonObject& config = loadConfig(jsonBuffer);
+
+	http.begin(
+		STRAVA_SERVER_URL + String("/activities?") + 
+		"name="+millisStr+"&" +
+		"type=Walk&" +
+		"start_date_local=2018-02-20T18:02:13Z&" +
+		"elapsed_time="+durationStr+"&"
+		"description=This\%20activity\%20was\%20created\%20by\%20prototype\%20of\%20ESP\%20Strava\%20Tracker\%20for\%20testing\%20purpuses"
+	);
+	http.addHeader("Authorization","Bearer " + config["access_token"].as<String>());
+
+	jsonBuffer.clear();
+
+	int httpResponseCode = http.POST("");
+	if (httpResponseCode < 0){
+		log_w("Request to create strava walk activity failed");
+	}else if(httpResponseCode >= 200 && httpResponseCode < 300){
+		log_i("Successfully created strava walk activity with duration=%s and name=%s",durationStr,millisStr);
+	}else{
+		log_i("The strava walk activity creation request responded with non-2xx (%d)",httpResponseCode);
+		String resContent = http.getString();
+		Serial.println(resContent);
+	}
+
+	http.end();
+}
