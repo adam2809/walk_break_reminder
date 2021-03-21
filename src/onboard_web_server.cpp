@@ -1,11 +1,10 @@
 #include "onboard_web_server.hpp"
 
-AsyncWebServer server(80);
-char* currSsid;
+AsyncWebServer server(PORT);
 HTTPClient http;
 
-void startServer(char* _currSsid){
-	currSsid = _currSsid;
+void startServer(){
+	log_i("Starting the onboard web server on port %d",PORT);
 
 	server.on("/", HTTP_GET, [&](AsyncWebServerRequest *request){
 		log_i("Got GET on /");
@@ -45,7 +44,7 @@ void notFound(AsyncWebServerRequest *request){
 
 String templateProcessor(const String& var){
 	if(var == "CURRENT_WIFI_SSID"){
-		return currSsid;
+		return "currSsid";
 	}
 	return String();
 }
@@ -132,6 +131,7 @@ void deleteWifiNetwork(AsyncWebServerRequest *request){
 void submitEspCode(AsyncWebServerRequest *request){
 	log_i("Got POST on /submit_esp_code");
 	if(!request->hasParam("esp_code")){
+		log_w("Missing esp_code parameter");
 		request->send_P(400, "application/json","Error: missing required parameter esp_code");
 		return;
 	}
@@ -140,12 +140,15 @@ void submitEspCode(AsyncWebServerRequest *request){
 	http.begin(SUPPORT_SERVER_URL + String("/tokens?esp_code=") + espCode);
 	int httpResponseCode = http.GET();
 	if (httpResponseCode < 0){
+		log_w("Failed to perform esp code submittion request");
 		request->send_P(500, "text/plain","Error while making request for tokens");
 	}
 	
 	String resJson = http.getString();
 
-	if(httpResponseCode == 200){
+	if(httpResponseCode >= 200 && httpResponseCode < 300){
+		log_i("Esp code submittion request was successful");
+
 		DynamicJsonBuffer currConfigJsonBuffer(capacity);
 		DynamicJsonBuffer responseJsonBuffer(capacity);
 
@@ -153,6 +156,7 @@ void submitEspCode(AsyncWebServerRequest *request){
 		JsonObject& response = parseJson(responseJsonBuffer,resJson);
 		
 		if(!(response.containsKey("refresh_token") && response.containsKey("access_token"))){
+			log_w("Missing parameter in esp code submitton response");
 			request->send_P(500, "text/plain","The tokens request response does not contain required data");
 			return;
 		}
@@ -165,7 +169,10 @@ void submitEspCode(AsyncWebServerRequest *request){
 		writeFile(SPIFFS, "/config.json", configJsonString);
 		currConfigJsonBuffer.clear();
 		responseJsonBuffer.clear();
+	}else{
+		log_w("Esp code submittion response has non-2xx code (%d)",httpResponseCode);
 	}
+	log_i("Esp code submitton response was: %s",resJson.c_str());
 
 	request->send_P(httpResponseCode, "application/json",resJson.c_str());
 	http.end();
@@ -184,7 +191,7 @@ void createStravaActivity(int walkDuration){
 		STRAVA_SERVER_URL + String("/activities?") + 
 		"name="+millisStr+"&" +
 		"type=Walk&" +
-		"start_date_local=2018-02-20T18:02:13Z&" +
+		"start_date_local=2019-02-20T18:02:13Z&" +
 		"elapsed_time="+durationStr+"&"
 		"description=This\%20activity\%20was\%20created\%20by\%20prototype\%20of\%20ESP\%20Strava\%20Tracker\%20for\%20testing\%20purpuses"
 	);

@@ -35,6 +35,7 @@ bool attemptConnectionToSavedWifi(){
 
 void setup() {
 	Serial.begin(115200);
+	configureMPU(1); 
 
 	if(!SPIFFS.begin()){ 
 		log_e("An Error has occurred while mounting SPIFFS");  
@@ -51,8 +52,10 @@ void setup() {
 		walkStartMilis = millis();
 	}, WiFiEvent_t::SYSTEM_EVENT_STA_DISCONNECTED);
 
-	attemptConnectionToSavedWifi();
-	createStravaActivity(59);
+	if(attemptConnectionToSavedWifi()){
+		startServer();
+	}
+	createStravaActivity(100);
 }
 
 void loop() {
@@ -60,7 +63,9 @@ void loop() {
 
 	if(walkStartMilis != -1 && currentMillis - prevMillis >= WIFI_CONN_POLLING_INTERVAL) {
 		if(attemptConnectionToSavedWifi()){
-			log_i("Finished walk duration was: %d",millis() - walkStartMilis);
+			int duration = millis() - walkStartMilis;
+			log_i("Finished walk duration was: %d",duration);
+			createStravaActivity(duration);
 			walkStartMilis = -1;
 		}
 		prevMillis = millis();
