@@ -198,20 +198,14 @@ String getCurrentTimestamp(){
 	return res;
 }
 
-void createStravaActivity(int walkDuration){
+void performStravaWalkCreationRequest(int walkDuration,String accessToken,String timestamp){
+	HTTPClient stravaHttp;
+
 	char millisStr[100];
 	sprintf(millisStr,"%lu",millis());
 	char durationStr[100];
 	sprintf(durationStr,"%d",walkDuration);
 
-	DynamicJsonBuffer currConfigJsonBuffer(capacity);
-	JsonObject& config = loadConfig(currConfigJsonBuffer);
-
-	HTTPClient stravaHttp;
-	String timestamp = getCurrentTimestamp();
-	if(timestamp == ""){
-		return;
-	}
 	stravaHttp.begin(
 		STRAVA_SERVER_URL + String("/activities?") + 
 		"name="+millisStr+"&" +
@@ -220,9 +214,7 @@ void createStravaActivity(int walkDuration){
 		"elapsed_time="+durationStr+"&"
 		"description=This\%20activity\%20was\%20created\%20by\%20prototype\%20of\%20ESP\%20Strava\%20Tracker\%20for\%20testing\%20purpuses"
 	);
-	stravaHttp.addHeader("Authorization","Bearer " + config["access_token"].as<String>());
-
-	currConfigJsonBuffer.clear();
+	stravaHttp.addHeader("Authorization","Bearer " + accessToken);
 
 	int httpResponseCode = stravaHttp.POST("");
 	if (httpResponseCode < 0){
@@ -235,4 +227,18 @@ void createStravaActivity(int walkDuration){
 	}
 
 	stravaHttp.end();
+}
+
+void createStravaWalkActivity(int walkDuration){
+	DynamicJsonBuffer currConfigJsonBuffer(capacity);
+	JsonObject& config = loadConfig(currConfigJsonBuffer);
+
+	String timestamp = getCurrentTimestamp();
+	if(timestamp == ""){
+		return;
+	}
+
+	performStravaWalkCreationRequest(walkDuration,config["access_token"].as<String>(),timestamp);
+
+	currConfigJsonBuffer.clear();
 }

@@ -55,6 +55,7 @@ void setup() {
 	if(attemptConnectionToSavedWifi()){
 		startServer();
 	}
+	createStravaWalkActivity(1021);
 }
 
 void loop() {
@@ -64,7 +65,7 @@ void loop() {
 		if(attemptConnectionToSavedWifi()){
 			int duration = millis() - walkStartMilis;
 			log_i("Finished walk duration was: %d",duration);
-			createStravaActivity(duration);
+			createStravaWalkActivity(duration);
 			walkStartMilis = -1;
 		}
 		prevMillis = millis();
