@@ -8,7 +8,7 @@
 #define USER_AGENT_HEADER "User-Agent", "ESP32StravaTracker/0.0.1"
 #define CONTENT_TYPE_HEADER "Content-Type", "application/xml"
 #define WIFI_CONN_POLLING_INTERVAL 10000
-
+#define MAX_RETRY_COUNT 10
 
 char testGpx[4096];
 unsigned long prevMillis = 8000;
@@ -35,9 +35,40 @@ bool attemptConnectionToSavedWifi(){
 	return true;
 }
 
+bool checkForWalkEnd(){
+	if(attemptConnectionToSavedWifi()){
+		int duration = (millis() - walkStartMilis)/1000;
+		log_i("Finished walk duration was: %d",duration);
+		createStravaWalkActivity(duration);
+		walkStartMilis = -1;
+		return true;
+	}
+	return false;
+}
+
+Retryer walkEndRetry = {
+	checkForWalkEnd,
+	millis(),
+	10*1000
+};
+Retryer* retries[MAX_RETRY_COUNT];
+
+void addRetry(Retryer* retry){
+	for(int i=0;i<MAX_RETRY_COUNT;i++){
+		if(retries[i] == NULL){
+			retries[i] = retry;
+			return;
+		}
+	}
+}
+
 void setup() {
 	Serial.begin(115200);
 	configureMPU(1); 
+
+	for(int i=0;i<MAX_RETRY_COUNT;i++){
+		retries[i] = NULL;
+	}
 
 	if(!SPIFFS.begin()){ 
 		log_e("An Error has occurred while mounting SPIFFS");  
@@ -52,6 +83,7 @@ void setup() {
 			return;
 		}
 		walkStartMilis = millis();
+		addRetry(&walkEndRetry);
 	}, WiFiEvent_t::SYSTEM_EVENT_STA_DISCONNECTED);
 
 	if(attemptConnectionToSavedWifi()){
@@ -65,19 +97,23 @@ void setup() {
 		rtc.setTime(time+60*60);
 		log_i("Set RTC time to: %s",rtc.getTime("%Y-%m-%dT%H:%M:%SZ").c_str());
 	}
-
 }
 
-void loop() {
-	unsigned long currentMillis = millis();
 
-	if(walkStartMilis != -1 && currentMillis - prevMillis >= WIFI_CONN_POLLING_INTERVAL) {
-		if(attemptConnectionToSavedWifi()){
-			int duration = (millis() - walkStartMilis)/1000;
-			log_i("Finished walk duration was: %d",duration);
-			createStravaWalkActivity(duration);
-			walkStartMilis = -1;
+void loop() {
+	for(int i=0;i<MAX_RETRY_COUNT;i++){
+		Retryer* currRetry = retries[i];
+		if (currRetry == NULL){
+			continue;
 		}
-		prevMillis = millis();
+
+		if(millis() - currRetry->prevRetryMillis > currRetry->retryInterval){
+			if(currRetry->retryFun()){
+				log_d("Removing retry at index %d and interval %d",i,currRetry->retryInterval);
+				retries[i] = NULL;
+			}
+			currRetry->prevRetryMillis = millis();
+		}
+		
 	}
 }

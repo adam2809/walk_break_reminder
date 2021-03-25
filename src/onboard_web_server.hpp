@@ -23,6 +23,12 @@ void getAllWifiNetworks(AsyncWebServerRequest *request);
 void addNewWifiNetwork(AsyncWebServerRequest *request, JsonVariant &jsonVar);
 void deleteWifiNetwork(AsyncWebServerRequest *request);
 void submitEspCode(AsyncWebServerRequest *request);
-void createStravaWalkActivity(int walkDuration);
+bool createStravaWalkActivity(int walkDuration);
 long getCurrentTimestamp();
 long getCurrentEpoch();
+
+struct Retryer{
+	bool(& retryFun)();
+	unsigned long prevRetryMillis;
+	unsigned long retryInterval;
+};
