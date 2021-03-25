@@ -2,9 +2,11 @@
 
 AsyncWebServer server(PORT);
 HTTPClient http;
+ESP32Time* rtcRef;
 
-void startServer(){
+void startServer(ESP32Time* _rtc){
 	log_i("Starting the onboard web server on port %d",PORT);
+	rtcRef = _rtc;
 
 	server.on("/", HTTP_GET, [&](AsyncWebServerRequest *request){
 		log_i("Got GET on /");
@@ -178,19 +180,19 @@ void submitEspCode(AsyncWebServerRequest *request){
 	http.end();
 }
 
-String getCurrentTimestamp(){
+long getCurrentEpoch(){
 	HTTPClient timeHttp;
 	timeHttp.begin(SUPPORT_SERVER_URL+String("/time"));
 	int httpResponseCode = timeHttp.GET();
-	String res = "";
+	long res = 0;
 
 	if (httpResponseCode < 0){
 		log_w("Failed to perform current time request");
 	}else if(httpResponseCode < 200 || httpResponseCode >= 300){
 		log_w("Current time request resulted in non-2xx response (%d)",httpResponseCode);
 	}else{
-		res = timeHttp.getString();
-		log_i("Successful current time request with timestamp %s",res.c_str());
+		res = atol(timeHttp.getString().c_str());
+		log_i("Successful current time request with timestamp %d",res);
 	}
 
 	timeHttp.end();
@@ -229,16 +231,19 @@ void performStravaWalkCreationRequest(int walkDuration,String accessToken,String
 	stravaHttp.end();
 }
 
-void createStravaWalkActivity(int walkDuration){
+void createStravaWalkActivity(int walkDurationInSecs){
+	log_i("Attempting to create walk activity");
+
 	DynamicJsonBuffer currConfigJsonBuffer(capacity);
 	JsonObject& config = loadConfig(currConfigJsonBuffer);
 
-	String timestamp = getCurrentTimestamp();
-	if(timestamp == ""){
-		return;
-	}
-
-	performStravaWalkCreationRequest(walkDuration,config["access_token"].as<String>(),timestamp);
+	time_t startTime = rtcRef->getEpoch() - walkDurationInSecs;
+	tm* timeinfo = localtime(&startTime);
+	char timestamp[25];
+	strftime(timestamp,25, "%Y-%m-%dT%H:%M:%SZ", timeinfo);
+	log_i("Activity start time is: %s",timestamp);
+	
+	performStravaWalkCreationRequest(walkDurationInSecs,config["access_token"].as<String>(),timestamp);
 
 	currConfigJsonBuffer.clear();
 }

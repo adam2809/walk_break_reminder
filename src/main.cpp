@@ -13,6 +13,8 @@
 char testGpx[4096];
 unsigned long prevMillis = 8000;
 unsigned long walkStartMilis = -1;
+String walkStartTimestamp;
+ESP32Time rtc;
 
 bool attemptConnectionToSavedWifi(){
 	log_i("Trying to connect to a saved wifi network");
@@ -53,9 +55,17 @@ void setup() {
 	}, WiFiEvent_t::SYSTEM_EVENT_STA_DISCONNECTED);
 
 	if(attemptConnectionToSavedWifi()){
-		startServer();
+		startServer(&rtc);
+
+		long time = getCurrentEpoch();
+		if(time == 0){
+			log_e("Could not set RTC time");
+		}
+		
+		rtc.setTime(time+60*60);
+		log_i("Set RTC time to: %s",rtc.getTime("%Y-%m-%dT%H:%M:%SZ").c_str());
 	}
-	createStravaWalkActivity(1021);
+
 }
 
 void loop() {
@@ -63,7 +73,7 @@ void loop() {
 
 	if(walkStartMilis != -1 && currentMillis - prevMillis >= WIFI_CONN_POLLING_INTERVAL) {
 		if(attemptConnectionToSavedWifi()){
-			int duration = millis() - walkStartMilis;
+			int duration = (millis() - walkStartMilis)/1000;
 			log_i("Finished walk duration was: %d",duration);
 			createStravaWalkActivity(duration);
 			walkStartMilis = -1;
