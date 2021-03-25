@@ -178,37 +178,61 @@ void submitEspCode(AsyncWebServerRequest *request){
 	http.end();
 }
 
+String getCurrentTimestamp(){
+	HTTPClient timeHttp;
+	timeHttp.begin(SUPPORT_SERVER_URL+String("/time"));
+	int httpResponseCode = timeHttp.GET();
+	String res = "";
+
+	if (httpResponseCode < 0){
+		log_w("Failed to perform current time request");
+	}else if(httpResponseCode < 200 || httpResponseCode >= 300){
+		log_w("Current time request resulted in non-2xx response (%d)",httpResponseCode);
+	}else{
+		res = timeHttp.getString();
+		log_i("Successful current time request with timestamp %s",res.c_str());
+	}
+
+	timeHttp.end();
+
+	return res;
+}
+
 void createStravaActivity(int walkDuration){
 	char millisStr[100];
 	sprintf(millisStr,"%lu",millis());
 	char durationStr[100];
 	sprintf(durationStr,"%d",walkDuration);
 
-	DynamicJsonBuffer jsonBuffer(capacity);
-	JsonObject& config = loadConfig(jsonBuffer);
+	DynamicJsonBuffer currConfigJsonBuffer(capacity);
+	JsonObject& config = loadConfig(currConfigJsonBuffer);
 
-	http.begin(
+	HTTPClient stravaHttp;
+	String timestamp = getCurrentTimestamp();
+	if(timestamp == ""){
+		return;
+	}
+	stravaHttp.begin(
 		STRAVA_SERVER_URL + String("/activities?") + 
 		"name="+millisStr+"&" +
 		"type=Walk&" +
-		"start_date_local=2019-02-20T18:02:13Z&" +
+		"start_date_local="+timestamp+"&" +
 		"elapsed_time="+durationStr+"&"
 		"description=This\%20activity\%20was\%20created\%20by\%20prototype\%20of\%20ESP\%20Strava\%20Tracker\%20for\%20testing\%20purpuses"
 	);
-	http.addHeader("Authorization","Bearer " + config["access_token"].as<String>());
+	stravaHttp.addHeader("Authorization","Bearer " + config["access_token"].as<String>());
 
-	jsonBuffer.clear();
+	currConfigJsonBuffer.clear();
 
-	int httpResponseCode = http.POST("");
+	int httpResponseCode = stravaHttp.POST("");
 	if (httpResponseCode < 0){
 		log_w("Request to create strava walk activity failed");
 	}else if(httpResponseCode >= 200 && httpResponseCode < 300){
 		log_i("Successfully created strava walk activity with duration=%s and name=%s",durationStr,millisStr);
 	}else{
 		log_i("The strava walk activity creation request responded with non-2xx (%d)",httpResponseCode);
-		String resContent = http.getString();
-		Serial.println(resContent);
+		String resContent = stravaHttp.getString();
 	}
 
-	http.end();
+	stravaHttp.end();
 }

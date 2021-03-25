@@ -15,17 +15,17 @@ unsigned long prevMillis = 8000;
 unsigned long walkStartMilis = -1;
 
 bool attemptConnectionToSavedWifi(){
-	log_d("Trying to connect to a saved wifi network");
+	log_i("Trying to connect to a saved wifi network");
 
 	DynamicJsonBuffer jsonBuffer(capacity);
 	JsonObject& config = loadConfig(jsonBuffer);
 
 	int found = scanForSavedWifiNetworks(config["wifi"].as<JsonArray&>());
 	if(found == -1){
-		log_d("No available saved networks");
+		log_i("No available saved networks");
 		return false;
 	}
-	log_d("Found (index=%d) network with ssid: %s",found,config["wifi"].as<JsonArray&>()[found].as<JsonObject&>()["ssid"].as<String>());
+	log_i("Found (index=%d) network with ssid: %s",found,config["wifi"].as<JsonArray&>()[found].as<JsonObject&>()["ssid"].as<String>());
 	connectToWiFi(config["wifi"][found]["ssid"],config["wifi"][found]["password"]);
 
 	jsonBuffer.clear();
@@ -45,7 +45,7 @@ void setup() {
   	WiFi.disconnect();
 
 	WiFi.onEvent([](WiFiEvent_t event, WiFiEventInfo_t info){
-		log_d("WiFi lost connection. Reason: %d",info.disconnected.reason);
+		log_i("WiFi lost connection. Reason: %d",info.disconnected.reason);
 		if(info.disconnected.reason == 8 || walkStartMilis != -1){
 			return;
 		}
@@ -55,7 +55,6 @@ void setup() {
 	if(attemptConnectionToSavedWifi()){
 		startServer();
 	}
-	createStravaActivity(100);
 }
 
 void loop() {

@@ -14,7 +14,7 @@ void connectToWiFi(const char* ssid,const char* password){
 		}
 	}
 
-	log_i("Connected to %s. My IP address is: %s",ssid,WiFi.localIP().toString());
+	log_i("Connected to %s. My IP address is: %s",ssid,WiFi.localIP().toString().c_str());
 }
 
 void logWifiNetworkStats(int index){
