@@ -9,6 +9,7 @@
 #include <driver/adc.h>
 #include "time.h"
 #include <ESP32Time.h>
+#include <functional>
 
 #define JSON_STRING_BUFFER_LENGTH 1024
 #define MAX_WIFI_NETWORKS 10
@@ -28,7 +29,9 @@ long getCurrentTimestamp();
 long getCurrentEpoch();
 
 struct Retryer{
-	bool(& retryFun)();
+	std::function<bool()> retryFun;
 	unsigned long prevRetryMillis;
 	unsigned long retryInterval;
+	int maxRetryCount;
+	int currRetryCount;
 };

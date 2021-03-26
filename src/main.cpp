@@ -16,6 +16,18 @@ unsigned long walkStartMilis = -1;
 String walkStartTimestamp;
 ESP32Time rtc;
 
+
+Retryer createWalkActivityRetry = {
+	[] () -> bool {
+		return true;
+	},
+	millis(),
+	10*1000,
+	20,
+	0
+};
+Retryer* retries[MAX_RETRY_COUNT];
+
 bool attemptConnectionToSavedWifi(){
 	log_i("Trying to connect to a saved wifi network");
 
@@ -35,24 +47,6 @@ bool attemptConnectionToSavedWifi(){
 	return true;
 }
 
-bool checkForWalkEnd(){
-	if(attemptConnectionToSavedWifi()){
-		int duration = (millis() - walkStartMilis)/1000;
-		log_i("Finished walk duration was: %d",duration);
-		createStravaWalkActivity(duration);
-		walkStartMilis = -1;
-		return true;
-	}
-	return false;
-}
-
-Retryer walkEndRetry = {
-	checkForWalkEnd,
-	millis(),
-	10*1000
-};
-Retryer* retries[MAX_RETRY_COUNT];
-
 void addRetry(Retryer* retry){
 	for(int i=0;i<MAX_RETRY_COUNT;i++){
 		if(retries[i] == NULL){
@@ -61,6 +55,29 @@ void addRetry(Retryer* retry){
 		}
 	}
 }
+
+bool checkForWalkEnd(){
+	if(attemptConnectionToSavedWifi()){
+		int duration = (millis() - walkStartMilis)/1000;
+		log_i("Finished walk duration was: %d",duration);
+		walkStartMilis = -1;
+		createWalkActivityRetry.retryFun = [duration] () -> bool {
+			return createStravaWalkActivity(duration);
+		};
+		addRetry(&createWalkActivityRetry);
+		return true;
+	}
+	return false;
+}
+
+
+Retryer walkEndRetry = {
+	checkForWalkEnd,
+	millis(),
+	10*1000,
+	10000,
+	0
+};
 
 void setup() {
 	Serial.begin(115200);
@@ -107,13 +124,20 @@ void loop() {
 			continue;
 		}
 
+		if(currRetry->currRetryCount >= currRetry->maxRetryCount){
+			log_d("Retry at index %d and interval %d reached its maximum retry count",i,currRetry->retryInterval);
+			retries[i] = NULL;
+			continue;
+		}
+
 		if(millis() - currRetry->prevRetryMillis > currRetry->retryInterval){
+			log_d("Retrying entry at index %d and interval %d",i,currRetry->retryInterval);
 			if(currRetry->retryFun()){
-				log_d("Removing retry at index %d and interval %d",i,currRetry->retryInterval);
+				log_d("Retry at index %d and interval %d succeded and was removed",i,currRetry->retryInterval);
 				retries[i] = NULL;
 			}
+			currRetry->currRetryCount++;
 			currRetry->prevRetryMillis = millis();
 		}
-		
 	}
 }
