@@ -14,11 +14,11 @@ void connectToWiFi(const char* ssid,const char* password){
 		}
 	}
 
-	log_i("Connected to %s. My IP address is: %s",ssid,WiFi.localIP().toString().c_str());
+	log_i("Connected to %s with RSSI = %d and IP = %s",WiFi.SSID().c_str(),WiFi.RSSI(),WiFi.localIP().toString().c_str());
 }
 
 void logWifiNetworkStats(int index){
-	log_d("Scan result %d: %s (%d) %s",index,WiFi.SSID(index),WiFi.RSSI(index),(WiFi.encryptionType(index) == WIFI_AUTH_OPEN)?" ":"*");
+	log_d("Scan result %d: %s (%d) %s",index,WiFi.SSID(index).c_str(),WiFi.RSSI(index),(WiFi.encryptionType(index) == WIFI_AUTH_OPEN)?" ":"*");
 }
 
 
