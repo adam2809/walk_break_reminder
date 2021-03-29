@@ -15,7 +15,7 @@ void startServer(ESP32Time* _rtc){
 	});
 
 	server.on("/rssi", HTTP_GET, [&](AsyncWebServerRequest *request){
-		log_i("Got GET on /");
+		log_i("Got GET on /rssi");
 		request->send_P(200, "text/html",String(WiFi.RSSI()).c_str());
 	});
 
