@@ -4,17 +4,14 @@ void connectToWiFi(const char* ssid,const char* password){
 	log_d("Trying to connect to WiFi with SSID = %s and password %s",ssid,password);
 	WiFi.begin(ssid, password);
 
-	uint8_t i = 0;
-	while (WiFi.status() != WL_CONNECTED){
-		// TODO remove the delay here
-		delay(500);
+	long startMillis = millis();
+	while (millis() - startMillis < WIFI_CONN_WAIT_MILLIS && WiFi.status() != WL_CONNECTED);
 
-		if ((++i % 16) == 0){
-			log_d("Still trying to connect");
-		}
+	if(WiFi.status() == WL_CONNECTED){
+		log_i("Connected to %s with RSSI = %d and IP = %s",WiFi.SSID().c_str(),WiFi.RSSI(),WiFi.localIP().toString().c_str());
+	}else{
+		log_i("Could not connect to %s",ssid);
 	}
-
-	log_i("Connected to %s with RSSI = %d and IP = %s",WiFi.SSID().c_str(),WiFi.RSSI(),WiFi.localIP().toString().c_str());
 }
 
 void logWifiNetworkStats(int index){
@@ -33,7 +30,7 @@ int indexOfSsidInWifiArr(JsonArray& arr,String ssid){
 }
 
 /*
-Scans for networks and returns index of found wifi network or -1 in none found
+Scans for networks and returns index of found wifi network in config or -1 in none found
 */
 int scanForSavedWifiNetworks(JsonArray& savedWiFiNetworks){
     int n = WiFi.scanNetworks();
