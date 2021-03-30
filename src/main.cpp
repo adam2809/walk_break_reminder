@@ -102,6 +102,10 @@ bool noActiveRetries(){
 	return true;
 }
 
+void resetRetryStruct(Retryer* retry){
+	retry->currRetryCount = 0;
+}
+
 bool checkForWalkEnd(){
 	if(millis() - walkStartMilis > WALK_BRAKE_LENGTH_MILLIS){
 		log_i("Lighting LED to signal walk finish");
@@ -215,6 +219,7 @@ void loop() {
 
 		if(currRetry->currRetryCount >= currRetry->maxRetryCount){
 			log_d("Retry at index %d and interval %d reached its maximum retry count",i,currRetry->retryInterval);
+			resetRetryStruct(retries[i]);
 			retries[i] = NULL;
 			continue;
 		}
@@ -223,7 +228,9 @@ void loop() {
 			log_d("Retrying entry at index %d and interval %d",i,currRetry->retryInterval);
 			if(currRetry->retryFun()){
 				log_d("Retry at index %d and interval %d succeded and was removed",i,currRetry->retryInterval);
+				resetRetryStruct(retries[i]);
 				retries[i] = NULL;
+				continue;
 			}
 			currRetry->currRetryCount++;
 			currRetry->prevRetryMillis = millis();
