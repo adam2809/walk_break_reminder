@@ -40,6 +40,9 @@ Retryer createWalkActivityRetry = {
 Retryer blinkLedRetry = {
 	[] () -> bool {
 		digitalWrite(GPIO_NUM_32,!digitalRead(GPIO_NUM_32));
+		if(blinkLedRetry.currRetryCount <  4){
+			digitalWrite(GPIO_NUM_33,!digitalRead(GPIO_NUM_33));
+		}
 		if(blinkLedRetry.currRetryCount ==  blinkLedRetry.maxRetryCount - 1){
 			log_d("Last led blink interval");
 			lastWalkEnd = rtc.getEpoch();
@@ -149,7 +152,9 @@ void setup() {
 	configureMPU(1);
 
 	pinMode(GPIO_NUM_32,OUTPUT);
+	pinMode(GPIO_NUM_33,OUTPUT);
 	digitalWrite(GPIO_NUM_32,LOW);
+	digitalWrite(GPIO_NUM_33,LOW);
 
 	for(int i=0;i<MAX_RETRY_COUNT;i++){
 		retries[i] = NULL;
