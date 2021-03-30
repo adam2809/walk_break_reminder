@@ -10,6 +10,8 @@
 #include "time.h"
 #include <ESP32Time.h>
 #include <functional>
+#include <esp_wifi.h>
+#include <esp_bt.h>
 
 #define JSON_STRING_BUFFER_LENGTH 1024
 #define MAX_WIFI_NETWORKS 10
@@ -27,7 +29,7 @@ void submitEspCode(AsyncWebServerRequest *request);
 bool createStravaWalkActivity(int walkDuration);
 long getCurrentTimestamp();
 long getCurrentEpoch();
-
+void goToDeepSleep();
 struct Retryer{
 	std::function<bool()> retryFun;
 	unsigned long prevRetryMillis;

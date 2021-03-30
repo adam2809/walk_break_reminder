@@ -9,6 +9,7 @@
 #define CONTENT_TYPE_HEADER "Content-Type", "application/xml"
 #define WIFI_CONN_POLLING_INTERVAL 10000
 #define MAX_RETRY_COUNT 10
+#define AUTO_SLEEP_DELAY 45*1000
 
 char testGpx[4096];
 unsigned long prevMillis = 8000;
@@ -60,6 +61,16 @@ void addRetry(Retryer* retry){
 			return;
 		}
 	}
+}
+
+
+bool noActiveRetries(){
+	for(int i=0;i<MAX_RETRY_COUNT;i++){
+		if(retries[i] != NULL){
+			return false;
+		}
+	}
+	return true;
 }
 
 bool checkForWalkEnd(){
@@ -139,6 +150,16 @@ void setup() {
 
 
 void loop() {
+	if(
+		walkStartMilis == -1 && 
+		millis() > AUTO_SLEEP_DELAY && 
+		noActiveRetries()
+	){
+		log_i("Autosleep initiated");
+		goToDeepSleep();
+		return;
+	}
+
 	for(int i=0;i<MAX_RETRY_COUNT;i++){
 		Retryer* currRetry = retries[i];
 		if (currRetry == NULL){
