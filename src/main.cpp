@@ -7,9 +7,16 @@
 #define HOST_HEADER "Host", "192.168.0.87"
 #define USER_AGENT_HEADER "User-Agent", "ESP32StravaTracker/0.0.1"
 #define CONTENT_TYPE_HEADER "Content-Type", "application/xml"
+
 #define WIFI_CONN_POLLING_INTERVAL 10000
 #define MAX_RETRY_COUNT 10
 #define AUTO_SLEEP_DELAY 45*1000
+
+#define WALK_BRAKE_INTERVAL_SECS 10 * 60
+#define WALK_BRAKE_LENGTH_MILLIS 3 * 60 * 1000
+
+#define WALK_BRAKE_REMIND_LENGTH_MILLIS 20 * 1000
+#define WALK_BRAKE_REMIND_LED_BLINK_INTERVAL_MILLIS 700
 
 char testGpx[4096];
 unsigned long prevMillis = 8000;
@@ -17,7 +24,8 @@ unsigned long walkStartMilis = -1;
 String walkStartTimestamp;
 ESP32Time rtc;
 int rssiEstimateFailCount = 0;
-
+RTC_DATA_ATTR long lastWalkEnd = 0;
+bool isBlinking = false;
 
 Retryer createWalkActivityRetry = {
 	[] () -> bool {
@@ -26,6 +34,24 @@ Retryer createWalkActivityRetry = {
 	millis(),
 	10*1000,
 	20,
+	0
+};
+
+Retryer blinkLedRetry = {
+	[] () -> bool {
+		digitalWrite(GPIO_NUM_32,!digitalRead(GPIO_NUM_32));
+		if(blinkLedRetry.currRetryCount ==  blinkLedRetry.maxRetryCount - 1){
+			log_d("Last led blink interval");
+			lastWalkEnd = rtc.getEpoch();
+			log_d("Setting last walk end to %d",lastWalkEnd);
+			isBlinking = false;
+			digitalWrite(GPIO_NUM_32,LOW);
+		}
+		return false;
+	},
+	millis(),
+	WALK_BRAKE_REMIND_LED_BLINK_INTERVAL_MILLIS,
+	WALK_BRAKE_REMIND_LENGTH_MILLIS/WALK_BRAKE_REMIND_LED_BLINK_INTERVAL_MILLIS,
 	0
 };
 Retryer* retries[MAX_RETRY_COUNT];
@@ -74,6 +100,11 @@ bool noActiveRetries(){
 }
 
 bool checkForWalkEnd(){
+	if(millis() - walkStartMilis > WALK_BRAKE_LENGTH_MILLIS){
+		log_i("Lighting LED to signal walk finish");
+		digitalWrite(GPIO_NUM_32,HIGH);
+	}
+
 	if(attemptConnectionToSavedWifi()){
 		int rssi = WiFi.RSSI();
 		if(rssi < -55){
@@ -96,6 +127,9 @@ bool checkForWalkEnd(){
 			return createStravaWalkActivity(duration);
 		};
 		addRetry(&createWalkActivityRetry);
+		lastWalkEnd = rtc.getEpoch();
+		log_d("Setting last walk end to %d",lastWalkEnd);
+		digitalWrite(GPIO_NUM_32,LOW);
 		return true;
 	}
 	return false;
@@ -112,7 +146,10 @@ Retryer walkEndRetry = {
 
 void setup() {
 	Serial.begin(115200);
-	configureMPU(1); 
+	configureMPU(1);
+
+	pinMode(GPIO_NUM_32,OUTPUT);
+	digitalWrite(GPIO_NUM_32,LOW);
 
 	for(int i=0;i<MAX_RETRY_COUNT;i++){
 		retries[i] = NULL;
@@ -158,6 +195,11 @@ void loop() {
 		log_i("Autosleep initiated");
 		goToDeepSleep();
 		return;
+	}
+
+	if(!isBlinking && rtc.getEpoch() - lastWalkEnd > WALK_BRAKE_INTERVAL_SECS){
+		isBlinking = true;
+		addRetry(&blinkLedRetry);
 	}
 
 	for(int i=0;i<MAX_RETRY_COUNT;i++){
