@@ -15,9 +15,7 @@ unsigned long prevMillis = 8000;
 unsigned long walkStartMilis = -1;
 String walkStartTimestamp;
 ESP32Time rtc;
-
-char ssidHlp[50];
-char passwordHlp[50];
+int rssiEstimateFailCount = 0;
 
 
 Retryer createWalkActivityRetry = {
@@ -32,6 +30,10 @@ Retryer createWalkActivityRetry = {
 Retryer* retries[MAX_RETRY_COUNT];
 
 bool attemptConnectionToSavedWifi(){
+	if(WiFi.status() == WL_CONNECTED){
+		log_i("Already connected to %s with rssi %d",WiFi.SSID().c_str(),WiFi.RSSI());
+		return true;
+	}
 	log_i("Trying to connect to a saved wifi network");
 
 	DynamicJsonBuffer jsonBuffer(capacity);
@@ -43,13 +45,12 @@ bool attemptConnectionToSavedWifi(){
 		return false;
 	}
 	log_i("Found (index=%d) network with ssid: %s",found,config["wifi"].as<JsonArray&>()[found].as<JsonObject&>()["ssid"].as<String>().c_str());
-	strcpy(ssidHlp,config["wifi"][found]["ssid"]);
-	strcpy(passwordHlp,config["wifi"][found]["password"]);
-	connectToWiFi(ssidHlp,passwordHlp);
+
+	bool res = connectToWiFi(config["wifi"][found]["ssid"],config["wifi"][found]["password"]);
 
 	jsonBuffer.clear();
 
-	return true;
+	return res;
 }
 
 void addRetry(Retryer* retry){
@@ -64,14 +65,19 @@ void addRetry(Retryer* retry){
 bool checkForWalkEnd(){
 	if(attemptConnectionToSavedWifi()){
 		int rssi = WiFi.RSSI();
-		if(rssi == 0){
-			log_d("Rssi could not have been estinamted aborting walk end");
-			return false;
-		}
 		if(rssi < -55){
 			log_d("Connection to saved WiFi too weak (%d) aborting walk finish",WiFi.RSSI());
 			return false;
 		}
+
+		if(rssi == 0){
+			log_d("Rssi could not have been estinamted aborting walk end");
+			rssiEstimateFailCount++;
+			if(rssiEstimateFailCount < 10){
+				return false;
+			}
+		}
+
 		int duration = (millis() - walkStartMilis)/1000;
 		log_i("Finished walk duration was: %d",duration);
 		walkStartMilis = -1;

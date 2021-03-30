@@ -1,6 +1,6 @@
 #include "networking.hpp"
 
-void connectToWiFi(const char* ssid,const char* password){
+bool connectToWiFi(const char* ssid,const char* password){
 	log_d("Trying to connect to WiFi with SSID = %s and password %s",ssid,password);
 	WiFi.begin(ssid, password);
 
@@ -9,8 +9,10 @@ void connectToWiFi(const char* ssid,const char* password){
 
 	if(WiFi.status() == WL_CONNECTED){
 		log_i("Connected to %s with RSSI = %d and IP = %s",WiFi.SSID().c_str(),WiFi.RSSI(),WiFi.localIP().toString().c_str());
+		return true;
 	}else{
 		log_i("Could not connect to %s",ssid);
+		return false;
 	}
 }
 

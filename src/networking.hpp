@@ -6,5 +6,5 @@
 #define STRAVA_SERVER_URL "https://www.strava.com/api/v3"
 #define WIFI_CONN_WAIT_MILLIS 2000
 
-void connectToWiFi(const char* ssid,const char* password);
+bool connectToWiFi(const char* ssid,const char* password);
 int scanForSavedWifiNetworks(JsonArray& savedWiFiNetworks);
