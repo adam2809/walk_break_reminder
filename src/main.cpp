@@ -10,9 +10,9 @@
 
 #define WIFI_CONN_POLLING_INTERVAL 10000
 #define MAX_RETRY_COUNT 10
-#define AUTO_SLEEP_DELAY 45*1000
+#define AUTO_SLEEP_DELAY 70*1000
 
-#define WALK_BRAKE_INTERVAL_SECS 10 * 60
+#define WALK_BRAKE_INTERVAL_SECS 3 * 60
 #define WALK_BRAKE_LENGTH_MILLIS 3 * 60 * 1000
 
 #define WALK_BRAKE_REMIND_LENGTH_MILLIS 20 * 1000
@@ -151,6 +151,12 @@ Retryer walkEndRetry = {
 	0
 };
 
+void startWalk(){
+	walkStartMilis = millis();
+	addRetry(&walkEndRetry);
+	log_i("Starting walk at %d",walkStartMilis);
+}
+
 void setup() {
 	Serial.begin(115200);
 	configureMPU(1);
@@ -176,9 +182,7 @@ void setup() {
 		if(info.disconnected.reason == 8 || walkStartMilis != -1){
 			return;
 		}
-		walkStartMilis = millis();
-		addRetry(&walkEndRetry);
-		log_i("Starting walk at %d",walkStartMilis);
+		startWalk();
 	}, WiFiEvent_t::SYSTEM_EVENT_STA_DISCONNECTED);
 
 	if(attemptConnectionToSavedWifi()){
@@ -191,6 +195,8 @@ void setup() {
 		
 		rtc.setTime(time+60*60);
 		log_i("Set RTC time to: %s",rtc.getTime("%Y-%m-%dT%H:%M:%SZ").c_str());
+	}else{
+		startWalk();
 	}
 }
 
@@ -202,7 +208,7 @@ void loop() {
 		noActiveRetries()
 	){
 		log_i("Autosleep initiated");
-		goToDeepSleep();
+		goToDeepSleep((WALK_BRAKE_INTERVAL_SECS - (rtc.getEpoch() - lastWalkEnd)) * 1000000);
 		return;
 	}
 

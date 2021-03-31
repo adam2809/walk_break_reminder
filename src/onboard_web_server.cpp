@@ -24,7 +24,7 @@ void startServer(ESP32Time* _rtc){
 		log_i("Got GET on /sleep");
 		request->send_P(200, "text/html","goin to slp");
 
-		goToDeepSleep();
+		goToDeepSleep(0);
 	});
 
 	server.on("/wifi", HTTP_GET, getAllWifiNetworks);
@@ -258,17 +258,21 @@ bool createStravaWalkActivity(int walkDurationInSecs){
 }
 
 
-void goToDeepSleep(){
-  log_i("Going to sleep");
-  WiFi.disconnect(true);
-  WiFi.mode(WIFI_OFF);
-  btStop();
+void goToDeepSleep(long timerWakeupDelay){
+	log_i("Going to sleep");
+	WiFi.disconnect(true);
+	WiFi.mode(WIFI_OFF);
+	btStop();
 
-  adc_power_off();
-  esp_wifi_stop();
-  esp_bt_controller_disable();
+	adc_power_off();
+	esp_wifi_stop();
+	esp_bt_controller_disable();
 
-  esp_sleep_enable_ext0_wakeup(GPIO_NUM_15,0); delay(1500);
+	if(timerWakeupDelay > 0){
+		log_i("Timer wakeup set to: %d seconds",timerWakeupDelay/1000000);
+		esp_sleep_enable_timer_wakeup(timerWakeupDelay);
+	}
+	esp_sleep_enable_ext0_wakeup(GPIO_NUM_15,0); delay(1500);
 
-  esp_deep_sleep_start();
+	esp_deep_sleep_start();
 }

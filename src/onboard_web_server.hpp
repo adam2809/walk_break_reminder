@@ -29,7 +29,7 @@ void submitEspCode(AsyncWebServerRequest *request);
 bool createStravaWalkActivity(int walkDuration);
 long getCurrentTimestamp();
 long getCurrentEpoch();
-void goToDeepSleep();
+void goToDeepSleep(long timerWakeupDelay);
 struct Retryer{
 	std::function<bool()> retryFun;
 	unsigned long prevRetryMillis;
